@@ -123,19 +123,9 @@ struct SceneParameters
 
 	Vector3 pixel_delta_v;
 	float _pad3;
-		
+
 	uint32_t primitiveCount;
 	float _pad_end[3];
-};
-
-struct Primitive
-{
-	uint32_t type;
-	float radius;
-	float _pad0[2];
-
-	Vector4 position_point; // X, Y, Z, W(игнорируется)
-	Vector4 normal_color;   // X, Y, Z, W(игнорируется)
 };
 
 std::vector<Primitive> createScene()
@@ -204,7 +194,6 @@ SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const 
 }
 
 ConstantBuffer<SceneParameters> g_buffer;
-StructuredBuffer<Primitive> g_scene;
 
 bool Render::init(HWND hwnd, std::uint16_t width, std::uint16_t height)
 {
@@ -543,29 +532,34 @@ bool Render::init(HWND hwnd, std::uint16_t width, std::uint16_t height)
 
 	std::vector<Primitive> scenePrimitives = createScene();
 
-	g_scene.create(device_.Get(), scenePrimitives.data(), (std::uint16_t)scenePrimitives.size(), L"ScenePrimitives");
+	sceneBuffer_.create(device_.Get(), scenePrimitives.data(), (std::uint16_t)scenePrimitives.size(), L"ScenePrimitives");
 
 	params.primitiveCount = (std::uint16_t)scenePrimitives.size();
 
 	g_buffer.create(device_.Get(), params, L"SceneParameters");
 
-	UINT elementCount = g_scene.getCount();
-	ID3D12Resource* sbResource = g_scene.getResource();
+	createSceneSRV();
+
+	return true;
+}
+
+void Render::createSceneSRV()
+{
+	UINT elementCount = sceneBuffer_.getCount();
+	ID3D12Resource* sbResource = sceneBuffer_.getResource();
 
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	srvDesc.Format = DXGI_FORMAT_UNKNOWN; // Для Structured Buffer всегда UNKNOWN
+	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 	srvDesc.Buffer.FirstElement = 0;
 	srvDesc.Buffer.NumElements = elementCount;
-	srvDesc.Buffer.StructureByteStride = sizeof(Primitive); // Размер одной структуры
+	srvDesc.Buffer.StructureByteStride = sizeof(Primitive);
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-	UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);	
 	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(uavHeap_->GetCPUDescriptorHandleForHeapStart(), 1, descriptorSize);
 
 	device_->CreateShaderResourceView(sbResource, &srvDesc, srvHandle);
-
-	return true;
 }
 
 void Render::draw()
@@ -674,7 +668,7 @@ void Render::draw()
 	wait();
 }
 
-void Render::wait() 
+void Render::wait()
 {
 	// Сохраняем значение, которое GPU должен будет записать в Fence
 	const UINT64 fence = fenceValue_;
@@ -748,17 +742,28 @@ void Render::wait()
 	frameIndex_ = swapChain_->GetCurrentBackBufferIndex();
 }
 
-void Render::update(const Camera& camera, float dt)
+void Render::update(const Camera& camera, const std::vector<Primitive>& scene, bool isDirty, float dt)
 {
 	SceneParameters param = calcSceneParam(width_, height_, camera.pos());
-	param.primitiveCount = 2;
+	param.primitiveCount = scene.size();
 	g_buffer.update(param);
+	if (isDirty && !scene.empty())
+	{
+		// Освобождаем старый буфер
+		sceneBuffer_.release();
+
+		// Создаем новый с актуальными данными
+		sceneBuffer_.create(device_.Get(), scene.data(), (std::uint32_t)scene.size(), L"ScenePrim");
+
+		// ВАЖНО: Пересоздаем SRV, т.к. ресурс (m_sceneBuffer) теперь новый!
+		createSceneSRV();
+	}
 }
 
 
 void Render::fini() {
 	g_buffer.release();
-	g_scene.release();
+	sceneBuffer_.release();
 
 	wait();
 	CloseHandle(fenceEvent_);

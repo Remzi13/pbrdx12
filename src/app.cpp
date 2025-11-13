@@ -26,7 +26,7 @@ void App::update()
 	g_lastTime = currentTime;
 
 	inputUpdate();
-	render_.update( camera_, deltaTime );
+	render_.update( camera_, scene_, isDirty_, deltaTime );
 	render_.draw();
 }
 
@@ -132,6 +132,19 @@ void App::handleKeyEvent( const InputEvent& event )
 			std::cout << "Down released\n";
 		// moveDirection.y = pressed ? -1.0f : 0.0f;
 		break;
+	case 'A':
+		if (pressed)
+		{
+			Primitive newSphere;
+			newSphere.type = 0; // TYPE_SPHERE
+			newSphere.radius = 0.3f;
+			// Случайная позиция
+			newSphere.position_point = { (rand() % 10) - 5.0f, 0.5f, (rand() % 5) + 1.0f, 0.0f };
+			newSphere.normal_color = { 1.0f, 0.1f, 0.1f, 1.0f }; // Красный
+
+			scene_.push_back(newSphere);
+			isDirty_ = true;
+		}
 
 	default:
 		break;

@@ -11,7 +11,7 @@
 #include "render.h"
 #include "input.h"
 
-#include <cstdint>
+#include <vector>
 
 class App {
 public:
@@ -28,6 +28,9 @@ private:
 private:
 	Camera camera_;
 	Render render_;
+
+	std::vector<Primitive> scene_;
+	bool isDirty_{ true };
 };
 
 #endif // RTDX12_APP_H
