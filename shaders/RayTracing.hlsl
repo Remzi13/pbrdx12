@@ -29,10 +29,7 @@ cbuffer SceneConstants : register(b0)
     
     float3 pixel_delta_v;
     float _pad3;
-
-    float SphereRadius;    
-    float3 _pad4;
-
+        
     uint primitiveCount;
     float3 _pad5;
 };
@@ -79,9 +76,8 @@ HitInfo IntersectSphere(float3 rayOrigin, float3 rayDirection, float3 sphereCent
         {
             hit.t = t;
             
-            // Вычисление нормали происходит в CSMain для корректной передачи цвета.
-            // Здесь мы устанавливаем базовый цвет для сферы
-            hit.color = float3(0.1, 0.4, 0.8);
+            float3 hitPoint = rayOrigin + rayDirection * t;
+            hit.normal = normalize(hitPoint - sphereCenter);
             return hit;
         }
     }
@@ -131,10 +127,12 @@ HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount )
         {
             // Используем xyz компоненты
             currentHit = IntersectSphere( rayOrigin, rayDirection, p.position_point.xyz, p.radius );
+            closestHit.normal = currentHit.normal;
         }
         else if ( p.type == TYPE_PLANE )
         {
             currentHit = IntersectPlane( rayOrigin, rayDirection, p.position_point.xyz, p.normal_color.xyz );
+            closestHit.normal = p.normal_color.xyz;
         }
 
         if ( currentHit.t > 0.001 && currentHit.t < closestHit.t )
@@ -186,16 +184,8 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     finalColor = float4( background, 1.0 );
     // --- 3. Вычисление Цвета и Визуализация Нормалей ---
     if ( hit.t > 0.0 && hit.t < FLT_MAX )
-    {
-        float3 pos = rayOrigin + hit.t * rayDirection;
-        float cellSize = 0.2f;
-        float scaleFactor = 1.0f / cellSize;
-
-        float valX = floor( pos.x * scaleFactor + 1000.0f );
-        float valZ = floor( pos.z * scaleFactor + 1000.0f );
-
-        finalColor = float4( hit.color, 1.0 );
-        
+    {     
+        finalColor = float4(hit.color, 1.0);
     }
 
     OutputTexture[dispatchThreadID.xy] = finalColor;

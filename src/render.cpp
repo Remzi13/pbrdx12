@@ -110,7 +110,6 @@ ComPtr<IDxcBlob> CompileShader(
 	return shaderBlob;
 }
 
-// Структура для Буфера Констант. Должна быть выровнена по 256 байтам в D3D12.
 struct SceneParameters
 {
 	Vector3 camera_center;
@@ -124,10 +123,7 @@ struct SceneParameters
 
 	Vector3 pixel_delta_v;
 	float _pad3;
-
-	float sphereRadius; // 4 байта
-	float _pad_rad[3];
-
+		
 	uint32_t primitiveCount;
 	float _pad_end[3];
 };
@@ -203,7 +199,6 @@ SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const 
 	params.pixel00_loc = pixel00_loc;
 	params.pixel_delta_v = pixel_delta_v;
 	params.pixel_delta_u = pixel_delta_u;
-	params.sphereRadius = 0.5f; // Наш текущий радиус
 
 	return params;
 }
@@ -548,7 +543,7 @@ bool Render::init(HWND hwnd, std::uint16_t width, std::uint16_t height)
 
 	std::vector<Primitive> scenePrimitives = createScene();
 
-	g_scene.create(device_.Get(), scenePrimitives.data(), (std::uint16_t)scenePrimitives.size(), L"ScenePrim");
+	g_scene.create(device_.Get(), scenePrimitives.data(), (std::uint16_t)scenePrimitives.size(), L"ScenePrimitives");
 
 	params.primitiveCount = (std::uint16_t)scenePrimitives.size();
 
@@ -565,7 +560,6 @@ bool Render::init(HWND hwnd, std::uint16_t width, std::uint16_t height)
 	srvDesc.Buffer.StructureByteStride = sizeof(Primitive); // Размер одной структуры
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-	// Создаем SRV в первой свободной позиции (например, в позиции 0, если CBV там нет)
 	UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(uavHeap_->GetCPUDescriptorHandleForHeapStart(), 1, descriptorSize);
 
@@ -756,7 +750,6 @@ void Render::wait()
 
 void Render::update(const Camera& camera, float dt)
 {
-
 	SceneParameters param = calcSceneParam(width_, height_, camera.pos());
 	param.primitiveCount = 2;
 	g_buffer.update(param);
