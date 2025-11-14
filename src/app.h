@@ -31,6 +31,8 @@ private:
 
 	std::vector<Primitive> scene_;
 	bool isDirty_{ true };
+
+	HWND hwnd_;
 };
 
 #endif // RTDX12_APP_H

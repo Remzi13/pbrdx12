@@ -745,7 +745,7 @@ void Render::wait()
 void Render::update(const Camera& camera, const std::vector<Primitive>& scene, bool isDirty, float dt)
 {
 	SceneParameters param = calcSceneParam(width_, height_, camera.pos());
-	param.primitiveCount = scene.size();
+	param.primitiveCount = static_cast<uint32_t>(scene.size());
 	g_buffer.update(param);
 	if (isDirty && !scene.empty())
 	{
@@ -755,7 +755,6 @@ void Render::update(const Camera& camera, const std::vector<Primitive>& scene, b
 		// Создаем новый с актуальными данными
 		sceneBuffer_.create(device_.Get(), scene.data(), (std::uint32_t)scene.size(), L"ScenePrim");
 
-		// ВАЖНО: Пересоздаем SRV, т.к. ресурс (m_sceneBuffer) теперь новый!
 		createSceneSRV();
 	}
 }

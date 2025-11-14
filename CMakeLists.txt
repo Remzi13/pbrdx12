@@ -25,14 +25,14 @@ set(SRC
     src/main.cpp
 )
 # Добавляем наш исполняемый файл, который будет собран из main.cpp
-add_executable(rtdx12 ${SRC})
+add_executable(pbrdx12 ${SRC})
 
-set_target_properties(rtdx12 PROPERTIES WIN32_EXECUTABLE TRUE)
-target_compile_definitions(rtdx12 PRIVATE UNICODE _UNICODE)
+set_target_properties(pbrdx12 PROPERTIES WIN32_EXECUTABLE TRUE)
+target_compile_definitions(pbrdx12 PRIVATE UNICODE _UNICODE)
 
-target_link_libraries(rtdx12
-        d3d12.lib
-        dxgi.lib
-        user32.lib
-        dxcompiler.lib
+target_link_libraries(pbrdx12
+    d3d12.lib
+    dxgi.lib
+    user32.lib
+    dxcompiler.lib
 )
