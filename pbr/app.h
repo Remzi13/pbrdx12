@@ -13,7 +13,7 @@ public:
 	App(std::uint16_t width, std::uint16_t height);
 
 	bool isRun() const;
-	void input();
+	bool input();
 	void update();
 
 	void save() const;

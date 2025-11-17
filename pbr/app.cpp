@@ -112,7 +112,6 @@ void resetConsoleCursor()
     printf("\x1B[H");
 }
 
-
 void App::updateCameraVectors()
 {
     float yawRad = cameraYaw_;
@@ -169,38 +168,26 @@ void App::update()
     viewportHeight *= CONSOLE_CHAR_ASPECT_RATIO;
 
     // Расстояние до плоскости проекции (FOCAL_LENGTH = 1.0f)
-    Vector3 viewportCenter = cameraOrigin_ + cameraForward_ * FOCAL_LENGTH;
+    const Vector3 viewportCenter = cameraOrigin_ + cameraForward_ * FOCAL_LENGTH;
 
     // Вектор от центра вьюпорта к левому верхнему углу
-    Vector3 leftTop =
-        viewportCenter
-        - cameraRight_ * (viewportWidth / 2.0f)
-        + cameraUp_ * (viewportHeight / 2.0f);
+    const Vector3 leftTop = viewportCenter - cameraRight_ * (viewportWidth / 2.0f) + cameraUp_ * (viewportHeight / 2.0f);
 
     for (int y = 0; y < height_; ++y)
     {
         for (int x = 0; x < width_; ++x)
         {
             // u, v - нормализованные координаты на экране (от 0 до 1)
-            float u = float(x) / width_;
-            float v = float(y) / height_;
+            const float u = float(x) / width_;
+            const float v = float(y) / height_;
 
             // Вычисляем точку на плоскости проекции
-            Vector3 pixPos =
-                leftTop
-                + cameraRight_ * (u * viewportWidth)
-                - cameraUp_ * (v * viewportHeight);
+            const Vector3 pixPos = leftTop + cameraRight_ * (u * viewportWidth) - cameraUp_ * (v * viewportHeight);
 
             // Направление луча: от камеры через пиксель
-            Vector3 dir = unit_vector(pixPos - cameraOrigin_);
-            Ray ray = { cameraOrigin_, dir };
+            const Ray ray = { cameraOrigin_, unit_vector(pixPos - cameraOrigin_) };
 
-            // ... (Далее ваша логика рендеринга) ...
-            data_[y * width_ + x] = Vector3(
-                dir.x() * 0.5f + 0.5f,
-                dir.y() * 0.5f + 0.5f,
-                dir.z() * 0.5f + 0.5f
-            );
+            data_[y * width_ + x] = Vector3( ray.direction.x() * 0.5f + 0.5f, ray.direction.y() * 0.5f + 0.5f, ray.direction.z() * 0.5f + 0.5f);
 
             float tMin = 0.001f;
             float tMax = 10000.0f;
@@ -240,7 +227,7 @@ void App::save() const
     saveImageToFile(width_, height_, data_);
 }
 
-void App::input()
+bool App::input()
 {
     if (_kbhit())
     {
@@ -261,10 +248,10 @@ void App::input()
             if (arrow == 72 || arrow == 80 || arrow == 75 || arrow == 77)
             {
                 updateCameraVectors();
-                return;
+                return true;
             }
 
-            return;
+            return true;
         }
 
         switch (key)
@@ -277,5 +264,7 @@ void App::input()
         case 'e': cameraOrigin_ -= cameraUp_ * moveSpeed; break;
         case 27: isRun_ = false; break; // ESC
         }
+        return true;
     }
+    return false;
 }

@@ -10,9 +10,14 @@ int main()
 	
 	while (app.isRun())
 	{
-		app.input();
-		app.update();
-		std::this_thread::sleep_for(std::chrono::seconds(1));
+		if (app.input())
+		{
+			app.update();
+		}
+		else
+		{
+			std::this_thread::yield();
+		}
 	}
 
 	return 0;
