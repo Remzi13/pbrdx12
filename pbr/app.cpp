@@ -1,213 +1,281 @@
 ﻿#include "app.h"
-
 #include <iostream>
-#include <ostream>
-#include <iosfwd>
-#include <string>
 #include <fstream>
-#include <math.h>
-#include <algorithm>
 #include <sstream>
 #include <conio.h>
+#include <windows.h>
+#undef max
+#undef min
+#include <algorithm>
+#include <cmath>
+#include <iomanip>
+
 
 struct Ray
 {
-	Vector3 origin;
-	Vector3 direction;
+    Vector3 origin;
+    Vector3 direction;
 };
 
+const float CONSOLE_CHAR_ASPECT_RATIO = 0.45f;
+const float FOCAL_LENGTH = 1.0f;
 
 void saveImageToFile(std::uint16_t width, std::uint16_t height, const std::vector<Vector3>& data)
 {
-	std::ofstream outfile("output.ppm", std::ios::out | std::ios::binary);
+    std::ofstream outfile("output.ppm", std::ios::out | std::ios::binary);
 
-	if (outfile.is_open())
-	{
-		outfile << "P3\n" << width << " " << height << "\n255\n";
+    if (outfile.is_open())
+    {
+        outfile << "P3\n" << width << " " << height << "\n255\n";
 
-		for (int y = 0; y < height; ++y)
-		{
-			for (int x = 0; x < width; ++x)
-			{
+        for (int y = 0; y < height; ++y)
+        {
+            for (int x = 0; x < width; ++x)
+            {
+                int r = (int)data[y * width + x].x() * 255;
+                int g = (int)data[y * width + x].y() * 255;
+                int b = (int)data[y * width + x].z() * 255;
 
-				int r = data[y * width + x].x() * 255; // R
-				int g = data[y * width + x].y() * 255; // G
-				int b = data[y * width + x].z() * 255; // B
-
-				outfile << r << " " << g << " " << b << " ";
-
-			}
-			outfile << "\n";
-		}
-		outfile.close();
-
-		// Сообщаем о сохранении
-		printf("Image saved to output.ppm\n");
-	}
-	else
-	{
-		printf("Error: Could not open output.ppm for writing.\n");
-	}
+                outfile << r << " " << g << " " << b << " ";
+            }
+            outfile << "\n";
+        }
+        outfile.close();
+        printf("Image saved to output.ppm\n");
+    }
+    else
+    {
+        printf("Error: Could not open output.ppm for writing.\n");
+    }
 }
 
-//можно использовать точку и дистанцию 
-float intersectPlane(Ray ray, Vector3 poinOnPlane, Vector3 normPlane, float tMin, float tMax)
+float intersectPlane(Ray ray, Vector3 pointOnPlane, Vector3 planeNormal, float tMin, float tMax)
 {
-	float t = dot((poinOnPlane - ray.origin), normPlane) / dot(ray.direction, normPlane);
-	if (t > tMin && t < tMax)
-	{
-		return t;
-	}
-	else
-	{
-		return tMax;
-	}
+    float denom = dot(ray.direction, planeNormal);
+    if (fabs(denom) < 1e-6)
+        return tMax;
+
+    float t = dot(pointOnPlane - ray.origin, planeNormal) / denom;
+    if (t > tMin && t < tMax)
+        return t;
+    return tMax;
 }
 
 float intersectSphere(Ray ray, Vector3 center, float radius, float tMin, float tMax)
 {
-	Vector3 origin = ray.origin - center; // сдвигаем сферу в центр 
-	float A = 1;
-	float B = 2.0 * dot(origin, ray.direction);
-	float C = dot(origin, origin) - radius * radius;
-	float D = B * B - 4 * A * C;
-	if (D < 0.0)
-		return tMax;
-	float sqrtD = std::sqrt(D);
-	float t0 = (-B - sqrtD) / (2.0 * A);
-	float t1 = (-B + sqrtD) / (2.0 * A);
-	if (t0 >= tMin && t0 < tMax)
-		return t0;
-	if (t1 >= tMin && t1 < tMax)
-		return t1;
-	return tMax;
+    Vector3 oc = ray.origin - center;
+
+    float A = dot(ray.direction, ray.direction);
+    float B = 2.0f * dot(oc, ray.direction);
+    float C = dot(oc, oc) - radius * radius;
+
+    float D = B * B - 4 * A * C;
+    if (D < 0)
+        return tMax;
+
+    float sqrtD = sqrt(D);
+    float t0 = (-B - sqrtD) / (2 * A);
+    float t1 = (-B + sqrtD) / (2 * A);
+
+    if (t0 > tMin && t0 < tMax) return t0;
+    if (t1 > tMin && t1 < tMax) return t1;
+
+    return tMax;
 }
 
 std::string renderFrameToString(std::uint16_t width, std::uint16_t height, const std::vector<Vector3>& data)
 {
-	// Используем stringstream для построения буфера в памяти
-	std::stringstream buffer;
+    std::stringstream buffer;
 
-	for (int y = 0; y < height; ++y)
-	{
-		for (int x = 0; x < width; ++x)
-		{
-			// ... [Ваш код для получения r, g, b и pixel] ...
-			const Vector3& pixel = data[y * width + x];
-			int r = static_cast<int>(std::max(0.0f, std::min(pixel.x() * 255.999f, 255.0f)));
-			int g = static_cast<int>(std::max(0.0f, std::min(pixel.y() * 255.999f, 255.0f)));
-			int b = static_cast<int>(std::max(0.0f, std::min(pixel.z() * 255.999f, 255.0f)));
+    for (int y = 0; y < height; ++y)
+    {
+        for (int x = 0; x < width; ++x)
+        {
+            const Vector3& pixel = data[y * width + x];
+            int r = (int)std::max(0.0f, std::min(pixel.x() * 255.999f, 255.0f));
+            int g = (int)std::max(0.0f, std::min(pixel.y() * 255.999f, 255.0f));
+            int b = (int)std::max(0.0f, std::min(pixel.z() * 255.999f, 255.0f));
 
-			// Вместо printf используем buffer <<
-			// Устанавливаем цвет фона:
-			buffer << "\x1B[48;2;" << r << ";" << g << ";" << b << "m";
+            // \x1B[48;2;R;G;Bm : Установка TrueColor (24-bit) фона
+            buffer << "\x1B[48;2;" << r << ";" << g << ";" << b << "m ";
+            // \x1B[0m : Сброс цвета
+            buffer << "\x1B[0m";
+        }
+        buffer << "\n";
+    }
 
-			// Печатаем "пиксель" (пробел):
-			buffer << " ";
-
-			// Сбрасываем цвет:
-			buffer << "\x1B[0m";
-		}
-		// Новая строка в конце ряда:
-		buffer << "\n";
-	}
-
-	return buffer.str();
+    return buffer.str();
 }
 
 void resetConsoleCursor()
 {
-	// \x1B[H - ANSI-код для перемещения курсора в 
-	//         позицию 1,1 (верхний левый угол).
-	printf("\x1B[H");
+    printf("\x1B[H");
+}
+
+
+void App::updateCameraVectors()
+{
+    float yawRad = cameraYaw_;
+    float pitchRad = cameraPitch_;
+
+    // Ограничение тангажа (pitch) для предотвращения "переворота" камеры
+    // Углы должны быть в диапазоне (-ПИ/2, ПИ/2) или (-89.9, 89.9) градусов
+    if (pitchRad > 1.55f) pitchRad = 1.55f;
+    if (pitchRad < -1.55f) pitchRad = -1.55f;
+
+    // Вычисляем forward-вектор (cameraDirection_)
+    cameraForward_ = Vector3(cosf(yawRad) * cosf(pitchRad), sinf(pitchRad), sinf(yawRad) * cosf(pitchRad));
+    cameraForward_ = unit_vector(cameraForward_);
+
+    // Мировой "вверх" вектор (ось Y)
+    Vector3 worldUp(0.0f, 1.0f, 0.0f);
+
+    // Вычисляем cameraRight_
+    cameraRight_ = unit_vector(cross(cameraForward_, worldUp));
+
+    // Вычисляем cameraUp_
+    cameraUp_ = unit_vector(cross(cameraRight_, cameraForward_));
 }
 
 App::App(std::uint16_t width, std::uint16_t height) : width_(width), height_(height)
-{ 
-	data_.resize(width_ * height_);
+{
+    data_.resize(width_ * height_);
+
+    // Начальная позиция камеры: немного поднята над полом Y=0.5
+    cameraOrigin_ = Vector3(0.0f, 0.5f, 0.0f);
+
+    // Начальные углы: смотрим прямо вперед
+    cameraYaw_ = 1.570796f; // PI/2 (смотрит по Z) - если Z-вперед
+    cameraPitch_ = 0.0f;
+
+    updateCameraVectors();
 }
 
 bool App::isRun() const
 {
-	return isRun_;
+    return isRun_;
 }
 
 void App::update()
 {
-	const float aspectRatio = float(width_) / height_;	
-	float pixSize = 1.0f / height_;
-	Vector3 leftTop(-aspectRatio / 2, 0.5f, cameraOrigin_.z() + 1.0f);
-	
-	const float consoleCharAspectRatio = 0.5f;
-	const float verticalShift = (1.0f - consoleCharAspectRatio) / 2.0f;
 
-	for (int y = 0; y < height_; ++y)
-	{
-		for (int x = 0; x < width_; ++x)
-		{
-			float u = float(x) / width_;
-			float v = float(y) / height_;
-			//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0 + x * pixSize, pixSize / 2.0 + y * pixSize, 0 );
-			Vector3 pixPos = leftTop + Vector3( pixSize / 2.0f + u * aspectRatio, -pixSize / 2.0f - (v * consoleCharAspectRatio) - verticalShift, 0.0f);
+    const float aspectRatio = float(width_) / height_;
 
-			Vector3 dir = unit_vector(pixPos - cameraOrigin_);
+    // Вычисляем параметры плоскости проекции (как сенсор камеры)
+    float viewportHeight = 2.0f; // Условная высота вьюпорта
+    float viewportWidth = viewportHeight * aspectRatio; // Ширина с учетом аспекта экрана
 
-			data_[y * width_ + x] = Vector3(dir.x() * 0.5 + 0.5, dir.y() * 0.5 + 0.5, dir.z() * 0.5 + 0.5);
-			float tMin = 0.001;
-			float tMax = 10000;
-			Ray ray({ cameraOrigin_, dir });
+    // Применяем компенсацию аспекта консольного символа к вертикали
+    viewportHeight *= CONSOLE_CHAR_ASPECT_RATIO;
 
+    // Расстояние до плоскости проекции (FOCAL_LENGTH = 1.0f)
+    Vector3 viewportCenter = cameraOrigin_ + cameraForward_ * FOCAL_LENGTH;
 
-			Vector3 normPlane(0.0f, 1.0f, 0.0f);
-			Vector3 point(0.0f, -1.0f, 0.0f);
-			float t = intersectPlane({ cameraOrigin_, dir }, point, normPlane, tMin, tMax);
-			if (t < tMax)
-			{
-				Vector3 pos = ray.origin + ray.direction * t;
-				if ((int(pos.x() + 1000) % 2) != (int(pos.z() + 1000) % 2))
-				{
-					data_[y * width_ + x] = Vector3(1.0, 0.5, 0.5);
-				}
-				else
-				{
-					data_[y * width_ + x] = Vector3(0.5, 0.5, 0.5);
-				}
-				tMax = t;
-			}
+    // Вектор от центра вьюпорта к левому верхнему углу
+    Vector3 leftTop =
+        viewportCenter
+        - cameraRight_ * (viewportWidth / 2.0f)
+        + cameraUp_ * (viewportHeight / 2.0f);
 
-			t = intersectSphere({ cameraOrigin_, dir }, Vector3(0.0, -0.5, 7.0), 1.5, tMin, tMax);
-			if (t < tMax)
-			{
-				data_[y * width_ + x] = Vector3(0.5, 0.9, 0.5);				
-			}
-		}
-	}
-	
-	std::string frameBuffer = renderFrameToString(width_, height_, data_);
-	resetConsoleCursor();
-	// 3. Печатаем весь кадр ОДНИМ БЛОКОМ!
-	std::cout << frameBuffer << std::flush;
+    for (int y = 0; y < height_; ++y)
+    {
+        for (int x = 0; x < width_; ++x)
+        {
+            // u, v - нормализованные координаты на экране (от 0 до 1)
+            float u = float(x) / width_;
+            float v = float(y) / height_;
+
+            // Вычисляем точку на плоскости проекции
+            Vector3 pixPos =
+                leftTop
+                + cameraRight_ * (u * viewportWidth)
+                - cameraUp_ * (v * viewportHeight);
+
+            // Направление луча: от камеры через пиксель
+            Vector3 dir = unit_vector(pixPos - cameraOrigin_);
+            Ray ray = { cameraOrigin_, dir };
+
+            // ... (Далее ваша логика рендеринга) ...
+            data_[y * width_ + x] = Vector3(
+                dir.x() * 0.5f + 0.5f,
+                dir.y() * 0.5f + 0.5f,
+                dir.z() * 0.5f + 0.5f
+            );
+
+            float tMin = 0.001f;
+            float tMax = 10000.0f;
+
+            // Плоскость (Пол)
+            Vector3 planeNormal(0, 1, 0);
+            Vector3 planePoint(0, -1, 0);
+
+            float t = intersectPlane(ray, planePoint, planeNormal, tMin, tMax);
+            if (t < tMax)
+            {
+                Vector3 pos = ray.origin + ray.direction * t;
+                if ((int(pos.x() + 1000) % 2) != (int(pos.z() + 1000) % 2))
+                    data_[y * width_ + x] = Vector3(1, 0.5, 0.5);
+                else
+                    data_[y * width_ + x] = Vector3(0.5, 0.5, 0.5);
+
+                tMax = t;
+            }
+
+            // Сфера
+            t = intersectSphere(ray, Vector3(0.0f, -0.5f, 7.0f), 1.5f, tMin, tMax);
+            if (t < tMax)
+            {
+                data_[y * width_ + x] = Vector3(0.5f, 0.9f, 0.5f);
+            }
+        }
+    }
+
+    std::string frameBuffer = renderFrameToString(width_, height_, data_);
+    resetConsoleCursor();
+    std::cout << frameBuffer << std::flush;
 }
 
 void App::save() const
 {
-	saveImageToFile(width_, height_, data_);
+    saveImageToFile(width_, height_, data_);
 }
 
 void App::input()
 {
-	if (_kbhit())
-	{	
-		int inputKey = _getch();
-	
-		switch (inputKey)
-		{		
-		case 72:
-			cameraOrigin_ = Vector3(cameraOrigin_.x(), cameraOrigin_.y(), cameraOrigin_.z() + 0.5);
-			break;
-		case 80:
-			cameraOrigin_ = Vector3(cameraOrigin_.x(), cameraOrigin_.y(), cameraOrigin_.z() - 0.5);			
-			break;
-		}
-	}
+    if (_kbhit())
+    {
+        int key = _getch();
+        
+        float moveSpeed = 0.5f;
+        float rotSpeed = 0.1f;
+
+        if (key == 0 || key == 224)
+        {
+            int arrow = _getch();
+
+            if (arrow == 72) cameraPitch_ += rotSpeed;  // ↑
+            else if (arrow == 80) cameraPitch_ -= rotSpeed;  // ↓
+            else if (arrow == 75) cameraYaw_ -= rotSpeed;  // ←
+            else if (arrow == 77) cameraYaw_ += rotSpeed;  // →
+
+            if (arrow == 72 || arrow == 80 || arrow == 75 || arrow == 77)
+            {
+                updateCameraVectors();
+                return;
+            }
+
+            return;
+        }
+
+        switch (key)
+        {
+        case 'w': cameraOrigin_ += cameraForward_ * moveSpeed; break;
+        case 's': cameraOrigin_ -= cameraForward_ * moveSpeed; break;
+        case 'a': cameraOrigin_ -= cameraRight_ * moveSpeed; break;
+        case 'd': cameraOrigin_ += cameraRight_ * moveSpeed; break;
+        case 'q': cameraOrigin_ += cameraUp_ * moveSpeed; break;
+        case 'e': cameraOrigin_ -= cameraUp_ * moveSpeed; break;
+        case 27: isRun_ = false; break; // ESC
+        }
+    }
 }

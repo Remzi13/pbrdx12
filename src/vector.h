@@ -24,6 +24,12 @@ public:
 		d[2] += v.d[2];
 		return *this;
 	}
+	Vector3& operator-=(const Vector3& u) {
+		d[0] -= u[0];
+		d[1] -= u[1];
+		d[2] -= u[2];
+		return *this;
+	}
 
 	Vector3& operator*=( float t ) {
 		d[0] *= t;
@@ -79,7 +85,9 @@ inline Vector3 operator/( const Vector3& v, float t ) {
 	return ( 1 / t ) * v;
 }
 
-inline double dot( const Vector3& u, const Vector3& v ) {
+
+
+inline float dot( const Vector3& u, const Vector3& v ) {
 	return u.d[0] * v.d[0]
 		+ u.d[1] * v.d[1]
 		+ u.d[2] * v.d[2];
