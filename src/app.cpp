@@ -15,12 +15,14 @@ namespace {
 	int g_fps = 0;
 	float g_frameTime = 0.0f;
 }
-bool App::init( HWND hwnd, std::uint16_t width, std::uint16_t height )
+
+bool App::init( HWND hwnd )
 {
 	hwnd_ = hwnd;
-	camera_.setPos( { 0, 0, 2 } );
+	camera_.setPos( { 0, 0, 0 } );
 	g_lastTime = std::chrono::high_resolution_clock::now();
-	return render_.init( hwnd, width, height );
+	scene_.load( "scene.txt" );
+	return render_.init( hwnd, scene_);
 }
 
 void App::update()
@@ -112,11 +114,9 @@ void App::handleKeyEvent( const InputEvent& event )
 	{
 	case VK_LEFT:
 		if ( pressed )
-		{
-			
+		{	
 			const auto pos = camera_.pos();			
 			camera_.setPos( { pos.x() - shift, pos.y(), pos.z() } );
-
 			std::cout << "Left pressed" << camera_.pos() << "\n";
 		}
 		else
@@ -169,13 +169,22 @@ void App::handleKeyEvent( const InputEvent& event )
 			newSphere.type = 0; // TYPE_SPHERE
 			newSphere.radius = 0.3f;
 			// Случайная позиция
-			newSphere.position_point = { (rand() % 10) - 5.0f, ( rand() % 10 ) - 5.0f, (rand() % 5) + 1.0f, 0.0f };
-			newSphere.normal_color = { 1.0f, 0.1f, 0.1f, 1.0f }; // Красный
+			newSphere.position = { (rand() % 10) - 5.0f, ( rand() % 10 ) - 5.0f, (rand() % 5) + 1.0f, 0.0f };
+			newSphere.color = { 1.0f, 0.1f, 0.1f, 1.0f }; // Красный
 
-			scene_.push_back(newSphere);
+			auto s = scene_.samples();
+			scene_.setSamples( s + 1 );
+			//scene_.push_back(newSphere);
 			isDirty_ = true;
 		}
-
+		break;
+	case 'Z':
+		if ( pressed )
+		{
+			auto s = scene_.samples();
+			scene_.setSamples( s - 1 );
+		}
+		break;
 	default:
 		break;
 	}

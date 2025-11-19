@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SRC
     ../src/vector.h
+    ../src/scene.h
+    ../src/scene.cpp
     main.cpp
 )
 add_executable(pbr ${SRC})

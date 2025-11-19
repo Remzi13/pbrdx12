@@ -125,31 +125,9 @@ struct SceneParameters
 	float _pad3;
 
 	uint32_t primitiveCount;
-	float _pad_end[3];
+	uint32_t sampleCount;
+	float _pad_end[2];
 };
-
-std::vector<Primitive> createScene()
-{
-	std::vector<Primitive> primitives;
-
-	// 1. Сфера
-	Primitive sphere;
-	sphere.type = 0; // TYPE_SPHERE
-	sphere.radius = 0.5f;
-	sphere.position_point = { 0.0f, 0.0f, 4.0f, 0.0f }; // Центр сферы
-	sphere.normal_color = { 0.1f, 0.4f, 0.8f, 1.0f };   // Синий цвет
-	primitives.push_back(sphere);
-
-	// 2. Плоскость (земля)
-	Primitive plane;
-	plane.type = 1; // TYPE_PLANE
-	plane.radius = 0.0f; // Не используется
-	plane.position_point = { 0.0f, -1.0f, 0.0f, 0.0f }; // Точка на плоскости Y=-1.0
-	plane.normal_color = { 0.0f, 1.0f, 0.0f, 1.0f };    // Нормаль (смотрит вверх)
-	primitives.push_back(plane);
-
-	return primitives;
-}
 
 SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const Vector3& cameraCenter)
 {
@@ -174,12 +152,10 @@ SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const 
 	// cameraCenter + look_direction = (0, 0, 1)
 	// - viewport_u / 2.0f = Сдвиг влево на половину ширины
 	// - viewport_v / 2.0f = Сдвиг вверх на 0.5
-	const Vector3 viewport_upper_left = cameraCenter + look_direction
-		- viewport_u / 2.0f
-		- viewport_v / 2.0f;
+	const Vector3 viewport_upper_left = cameraCenter + look_direction - viewport_u / 2.0f - viewport_v / 2.0f;
 
 	// 5. Центр Пикселя (pixel00_loc)
-	// Это центр первого пикселя. Код верный.
+	// Это центр первого пикселя.
 	const Vector3 pixel_delta_u = viewport_u / (float)width;
 	const Vector3 pixel_delta_v = viewport_v / (float)height;
 	const Vector3 pixel00_loc = viewport_upper_left + 0.5f * (pixel_delta_u + pixel_delta_v);
@@ -195,10 +171,10 @@ SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const 
 
 ConstantBuffer<SceneParameters> g_buffer;
 
-bool Render::init(HWND hwnd, std::uint16_t width, std::uint16_t height)
-{
-	width_ = width;
-	height_ = height;
+bool Render::init(HWND hwnd, const Scene& scene)
+{ 
+	width_ = scene.width();
+	height_ = scene.height();
 
 	// --- 1. Включение слоя отладки ---
 	// Это ОБЯЗАТЕЛЬНО для разработки. Он будет сообщать об ошибках в DX12.
@@ -366,18 +342,6 @@ bool Render::init(HWND hwnd, std::uint16_t width, std::uint16_t height)
 		throw std::runtime_error("Failed to create DXC Compiler.");
 	}
 
-	// (Предполагаем, что скомпилированный .cso файл находится рядом)
-	std::vector<char> shaderData;
-	// В реальном проекте, замените это на загрузку RayTracing.cso с диска.
-	// Поскольку мы используем CMake, мы сделаем это проще:
-
-	// ВНИМАНИЕ: Для упрощения, мы пока используем заглушку. Если у вас
-	// есть способ загрузить .cso с диска, используйте его.
-	// Если вы используете VS, вы можете добавить .cso как ресурс.
-
-	// Для нашего примера: считаем, что вы вручную скомпилировали HLSL и загрузили
-	// байты в std::vector<char> shaderData Пока пропустим загрузку, чтобы не
-	// усложнять.
 	ComPtr<IDxcBlob> computeShader =
 		CompileShader(L"../shaders/RayTracing.hlsl", L"CSMain", L"cs_6_0");
 	ComPtr<ID3DBlob> shaderBlobForPSO;
@@ -528,23 +492,46 @@ bool Render::init(HWND hwnd, std::uint16_t width, std::uint16_t height)
 	const Vector3 camera_center = { 0.0f, 0.0f, 0.0f };
 
 	SceneParameters params = calcSceneParam(width_, height_, camera_center);
-
-
-	std::vector<Primitive> scenePrimitives = createScene();
-
-	sceneBuffer_.create(device_.Get(), scenePrimitives.data(), (std::uint16_t)scenePrimitives.size(), L"ScenePrimitives");
-
-	params.primitiveCount = (std::uint16_t)scenePrimitives.size();
+	params.primitiveCount = scene.count();
+	params.sampleCount = scene.samples();
 
 	g_buffer.create(device_.Get(), params, L"SceneParameters");
 
-	createSceneSRV();
+	createSceneSRV(scene);
 
 	return true;
 }
 
-void Render::createSceneSRV()
+void Render::createSceneSRV(const Scene& scene)
 {
+	std::vector<Primitive> primitives;
+	primitives.reserve( scene.count() );
+
+	for ( const auto& sp : scene.spheres() )
+	{
+		Primitive p;
+		p.type = 0;
+		p.radius = sp.radius;
+		p.position = Vector4( sp.pos.x(), sp.pos.y(), sp.pos.z(), 0.0 );
+		p.color = Vector4( sp.color.x(), sp.color.y(), sp.color.z(), 0.0 );
+
+		primitives.emplace_back( p );
+	}
+
+	for ( const auto& pl : scene.planes() )
+	{
+		Primitive p;
+		p.type = 1;
+		p.radius = pl.dist;
+		p.position = Vector4( pl.normal.x(), pl.normal.y(), pl.normal.z(), 0.0 );
+		p.color = Vector4( pl.color.x(), pl.color.y(), pl.color.z(), 0.0 );
+
+		primitives.emplace_back( p );
+	}
+
+	// Создаем новый с актуальными данными
+	sceneBuffer_.create( device_.Get(), primitives.data(), (std::uint32_t)primitives.size(), L"ScenePrim" );
+
 	UINT elementCount = sceneBuffer_.getCount();
 	ID3D12Resource* sbResource = sceneBuffer_.getResource();
 
@@ -630,7 +617,7 @@ void Render::draw()
 	// Глобальная RowSizeInBytes (3328) НЕ ДОЛЖНА здесь меняться!
 	UINT localNumRows;
 	UINT64 localRowSizeInBytes;
-	UINT64 localTotalBytes; // <-- TotalBytes тоже защитим
+	UINT64 localTotalBytes;
 
 	// ВЫЗОВ: Получаем Footprint для команды копирования
 	device_->GetCopyableFootprints(
@@ -742,25 +729,25 @@ void Render::wait()
 	frameIndex_ = swapChain_->GetCurrentBackBufferIndex();
 }
 
-void Render::update(const Camera& camera, const std::vector<Primitive>& scene, bool isDirty, float dt)
+void Render::update(const Camera& camera, const Scene& scene, bool isDirty, float dt)
 {
 	SceneParameters param = calcSceneParam(width_, height_, camera.pos());
-	param.primitiveCount = static_cast<uint32_t>(scene.size());
-	g_buffer.update(param);
-	if (isDirty && !scene.empty())
+	param.primitiveCount = static_cast<uint32_t>(scene.count());
+	param.sampleCount = static_cast<uint32_t>( scene.samples() );
+
+	g_buffer.update( param );
+
+	if (isDirty && scene.count() > 0)
 	{
 		// Освобождаем старый буфер
 		sceneBuffer_.release();
-
-		// Создаем новый с актуальными данными
-		sceneBuffer_.create(device_.Get(), scene.data(), (std::uint32_t)scene.size(), L"ScenePrim");
-
-		createSceneSRV();
+		createSceneSRV(scene);
 	}
 }
 
 
-void Render::fini() {
+void Render::fini() 
+{
 	g_buffer.release();
 	sceneBuffer_.release();
 

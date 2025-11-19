@@ -10,13 +10,14 @@
 
 #include "render.h"
 #include "input.h"
+#include "scene.h"
 
 #include <vector>
 
 class App {
 public:
 
-	bool init(HWND hwnd, std::uint16_t width, std::uint16_t height);
+	bool init(HWND hwnd );
 	void update();
 	void fini();
 
@@ -29,7 +30,8 @@ private:
 	Camera camera_;
 	Render render_;
 
-	std::vector<Primitive> scene_;
+	
+	Scene scene_;
 	bool isDirty_{ true };
 
 	HWND hwnd_;

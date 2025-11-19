@@ -65,7 +65,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 	// 3. Инициализация DirectX 12
 	try
 	{
-		app.init( hwnd, width, height );
+		app.init( hwnd );
 	}
 	catch ( const std::exception& e )
 	{

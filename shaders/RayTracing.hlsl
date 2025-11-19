@@ -31,7 +31,8 @@ cbuffer SceneConstants : register(b0)
     float _pad3;
         
     uint primitiveCount;
-    float3 _pad5;
+    uint sampleCount;
+    float2 _pad5;
 };
 
 struct Primitive
@@ -113,6 +114,27 @@ HitInfo IntersectPlane( float3 rayOrigin, float3 rayDirection, float3 pointOnPla
     return hit;
 }
 
+HitInfo IntersectPlane2( float3 rayOrigin, float3 rayDirection, float3 normalPlane, float d, float3 color )
+{
+    HitInfo hit = { FLT_MAX, float3( 0, 0, 0 ), float3( 0, 0, 0 ) };
+    float dist = dot( normalPlane, rayOrigin ) - d;
+    float dotND = dot( rayDirection, normalPlane );
+        
+    if ( abs( dotND ) > 0.0001 )
+    {
+        float t = dist / -dotND;
+
+        // Пересечение должно быть перед камерой
+        if ( t > 0.001 && t < FLT_MAX )
+        {
+            hit.t = t;
+            hit.normal = normalPlane; // Сохраняем нормаль для последующего освещения
+            hit.color = color;
+        }
+    }
+    return hit;
+}
+
 HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount )
 {
     HitInfo closestHit = { FLT_MAX, float3( 0,0,0 ), float3( 0,0,0 ) };
@@ -127,24 +149,38 @@ HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount )
         {
             // Используем xyz компоненты
             currentHit = IntersectSphere( rayOrigin, rayDirection, p.position_point.xyz, p.radius );
+            currentHit.color = p.normal_color;
             closestHit.normal = currentHit.normal;
         }
         else if ( p.type == TYPE_PLANE )
         {
-            currentHit = IntersectPlane( rayOrigin, rayDirection, p.position_point.xyz, p.normal_color.xyz );
+            currentHit = IntersectPlane2( rayOrigin, rayDirection, p.position_point.xyz, p.radius, p.normal_color.xyz );
             closestHit.normal = p.normal_color.xyz;
+            float3 pos = rayOrigin + rayDirection * currentHit.t;
+            if ( ( int( pos.x + 1000 ) % 2 ) != ( int( pos.z + 1000 ) % 2 ) )
+            {
+                currentHit.color = float3( 0, 0, 0 );
+            }
         }
 
         if ( currentHit.t > 0.001 && currentHit.t < closestHit.t )
         {
             closestHit = currentHit;
-            // Устанавливаем цвет из структуры для визуализации
-            closestHit.color = p.normal_color.xyz;
         }
     }
     return closestHit;
 }
 
+float3 getUniformSampleOffset( int index, int side_count )
+{
+    const float dist = 1.0 / float( side_count );
+    const float halfDist = 0.5 * dist;
+
+    const float x = float( index % side_count );
+    const float y = float( index / side_count );
+
+    return float3( ( halfDist + x * dist ) - 0.5, ( halfDist + y * dist ) - 0.5, 0.0 );
+}
 //---------------------------------------------------------------------------------
 // Главная функция вычислительного шейдера
 //--------------------------------------------------------------------------------------
@@ -155,38 +191,45 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
     uint width, height;
     OutputTexture.GetDimensions(width, height);
 
+
     if (dispatchThreadID.x >= width || dispatchThreadID.y >= height)
         return;
 
-    // --- 1. Генерация Луча (Vector Ray Generation) ---
-    // 1. Определяем центр пикселя в 3D пространстве
-    float3 pixel_center = pixel00_loc
-                        + dispatchThreadID.x * pixel_delta_u
-                        + dispatchThreadID.y * pixel_delta_v;
+    float3 accumulatedColor = float3( 0, 0, 0 );
+    for ( int s = 0; s < sampleCount * sampleCount; s++ )
+    {
+        float offset_u = getUniformSampleOffset(s, sampleCount ).x;
+        float offset_v = getUniformSampleOffset( s, sampleCount ).y;
 
-    // 2. Начало луча (Origin)
+        // --- 1. Генерация Луча (Vector Ray Generation) ---
+        // 1. Определяем центр пикселя в 3D пространстве
+        float3 pixel_center = pixel00_loc
+            + ( dispatchThreadID.x + offset_u ) * pixel_delta_u
+            + ( dispatchThreadID.y + offset_v ) * pixel_delta_v;
+        //Vector3 pixPos = pixel00_loc + Vector3( pixSize / 2.0f + pixel_delta_u * aspectRatio, -pixSize / 2.0f - v, 0.0f );
 
-    float3 rayOrigin = camera_center;
+        // 2. Начало луча (Origin)
 
-    // 3. Направление луча (Direction) - Должно быть нормализовано!
-    float3 rayDirection = normalize(pixel_center - rayOrigin);
-        
-    
-    //HitInfo hit = IntersectSphere(rayOrigin, rayDirection, sphereCenter, sphereRadius);
-    //HitInfo hit = IntersectPlane( rayOrigin, rayDirection, float3( 0.0f, -1.0f, 0.0f ), float3( 0.0f, 1.0f, 0.0f ) );
-    HitInfo hit = TraceScene( rayOrigin, rayDirection, primitiveCount);
+        float3 rayOrigin = camera_center;
 
-    float4 finalColor;
+        // 3. Направление луча (Direction) - Должно быть нормализовано!
+        float3 rayDirection = normalize( pixel_center - rayOrigin );
 
-    float a = 0.5 * ( rayDirection.y + 1.0 );
-    float3 background = ( 1.0 - a ) * float3( 1.0, 1.0, 1.0 ) + a * float3( 0.5, 0.7, 1.0 ); // От белого до светло-голубого
+        HitInfo hit = TraceScene( rayOrigin, rayDirection, primitiveCount );
 
-    finalColor = float4( background, 1.0 );
-    // --- 3. Вычисление Цвета и Визуализация Нормалей ---
-    if ( hit.t > 0.0 && hit.t < FLT_MAX )
-    {     
-        finalColor = float4(hit.color, 1.0);
+        float4 color;
+
+        float a = 0.5 * ( rayDirection.y + 1.0 );
+        float3 background = ( 1.0 - a ) * float3( 1.0, 1.0, 1.0 ) + a * float3( 0.5, 0.7, 1.0 ); // От белого до светло-голубого
+
+        color = float4( background, 1.0 );
+        // --- 3. Вычисление Цвета и Визуализация Нормалей ---
+        if ( hit.t > 0.0 && hit.t < FLT_MAX )
+        {
+            color = float4( hit.color, 1.0 );
+        }
+        accumulatedColor += color;
     }
 
-    OutputTexture[dispatchThreadID.xy] = finalColor;
+    OutputTexture[dispatchThreadID.xy] = float4(accumulatedColor / float( sampleCount * sampleCount ), 0.0);
 }

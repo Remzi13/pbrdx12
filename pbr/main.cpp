@@ -9,6 +9,7 @@
 #include <chrono>
 
 #include "../src/vector.h"
+#include "../src/scene.h"
 
 struct Ray
 {
@@ -20,107 +21,6 @@ float srgb( float x )
 {
 	return std::pow( x, 1 / 2.2 );
 }
-
-struct Sphere
-{
-	Vector3 pos;
-	Vector3 color;
-	float radius;
-};
-
-struct Plane
-{
-	Vector3 normal;
-	Vector3 color;
-	float dist;
-};
-
-class Scene
-{
-public:
-	Scene(const char* name ) 
-	{
-		parse(name);
-	}
-
-
-	int samples() const { return samples_; }
-	int width() const { return width_; }
-	int height() const { return height_; }
-
-	const std::vector<Sphere>& spheres() const { return spheres_; }
-	const std::vector<Plane>& planes() const { return planes_; }
-
-private:
-
-	std::stringstream getNextDataLine(std::ifstream& file)
-	{
-		std::string line;
-		while (std::getline(file, line)) {
-			size_t firstChar = line.find_first_not_of(" \t\r\n");
-
-			if (firstChar == std::string::npos || line[firstChar] == '#') {
-				continue;
-			}
-			return std::stringstream(line);
-		}
-		return std::stringstream("");
-	}
-
-	void parse(const std::string& filename) {
-		std::ifstream file(filename);
-		if (!file.is_open()) {
-			std::cerr << "Ошибка: Не удалось открыть файл " << filename << std::endl;
-			return;
-		}
-		// 1. Читаем настройки сцены (width, height, samples)
-		std::stringstream ss = getNextDataLine(file);
-		if (ss.fail())
-			return;
-
-		ss >> width_ >> height_ >> samples_;
-
-		// 2. Читаем Сферы
-		ss = getNextDataLine(file);
-		int numSpheres;
-		ss >> numSpheres;
-
-		for (int i = 0; i < numSpheres; ++i) {
-			ss = getNextDataLine(file);
-			Sphere sphere;
-			float x, y, z, rad, r, g, b;
-			ss >> x >> y >> z >> rad >> r >> g >> b;
-			sphere.pos = Vector3(x, y, z);
-			sphere.color = Vector3(r, g, b);
-			sphere.radius = rad;
-
-			spheres_.push_back(sphere);
-		}
-
-		// 3. Читаем Плоскости
-		ss = getNextDataLine(file);
-		int numPlanes;
-		ss >> numPlanes;
-
-		for (int i = 0; i < numPlanes; ++i) {
-			ss = getNextDataLine(file);
-			Plane p;
-			float x, y, z, dist, r, g, b;
-			ss >> x >> y >> z >> dist >> r >> g >> b;
-			p.normal = Vector3(x, y, z);
-			p.dist = dist;
-			p.color = Vector3(r, g, b);
-			planes_.push_back(p);
-		}
-	}
-
-private:
-	int samples_;
-	int width_;
-	int height_;
-	std::vector<Sphere> spheres_;
-	std::vector<Plane> planes_;
-};
 
 void saveImageToFile( std::uint16_t width, std::uint16_t height, const std::vector<Vector3>& data )
 {
@@ -216,7 +116,8 @@ Vector3 getUniformSampleOffset( int index, int side_count )
 
 int main()
 {
-	Scene scene("scene.txt");
+	Scene scene;
+	scene.load( "scene.txt" );
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
@@ -243,6 +144,7 @@ int main()
 			for ( int s = 0; s < SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT; ++s )
 			{
 				//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0 + x * pixSize, pixSize / 2.0 + y * pixSize, 0 );
+				//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0f + u * aspectRatio, -pixSize / 2.0f - v, 0.0f );
 				const Vector3 offset = getUniformSampleOffset( s, SIDE_SAMPLE_COUNT );
 				const Vector3 pixPos = leftTop + Vector3( pixSize * offset.x() + u * aspectRatio, -pixSize * offset.y() - v, 0.0f );
 

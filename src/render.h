@@ -14,8 +14,8 @@
 #include <vector>
 
 #include "vector.h"
-
 #include "buffers.h"
+#include "scene.h"
 
 using Microsoft::WRL::ComPtr;
 
@@ -25,8 +25,8 @@ struct Primitive
 	float radius;
 	float _pad0[2];
 
-	Vector4 position_point; // X, Y, Z, W(игнорируется)
-	Vector4 normal_color;   // X, Y, Z, W(игнорируется)
+	Vector4 position;
+	Vector4 color;
 };
 
 class Camera
@@ -49,16 +49,16 @@ private:
 class Render
 {
 public:
-	bool init( HWND hwnd, std::uint16_t width, std::uint16_t height );
+	bool init( HWND hwnd, const Scene& scene);
 	void fini();
 
-	void update( const Camera& camera, const std::vector<Primitive>& scene, bool isDirty, float dt );
+	void update( const Camera& camera, const Scene& scene, bool isDirty, float dt );
 	void draw();
 
 private:
 	void wait();
 
-	void createSceneSRV();
+	void createSceneSRV(const Scene& scene);
 
 private:
 	ComPtr<ID3D12Device> device_;

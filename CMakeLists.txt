@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Название нашего проекта и язык (C++)
-project(rtdx12 CXX)
+project(prtdx12 CXX)
 
 # Установим стандарт C++ (C++17 - хороший выбор)
 set(CMAKE_CXX_STANDARD 17)
@@ -21,6 +21,8 @@ set(SRC
     src/buffers.cpp
     src/input.h
     src/input.cpp
+    src/scene.h
+    src/scene.cpp
 
     src/main.cpp
 )
