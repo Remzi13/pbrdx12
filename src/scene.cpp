@@ -61,8 +61,7 @@ namespace {
 
 
 Scene::Scene()
-{
-	
+{	
 }
 
 bool Scene::load( const char* name )
@@ -122,12 +121,15 @@ HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
 {	
 	float t = max;
 	Vector3 color;
+	Vector3 normal;
 	for (const auto& sp : spheres_)
 	{
 		t = intersectSphere(ray, sp.pos, sp.radius, min, max);
 		if (t < max)
 		{
 			color = sp.color;
+			const Vector3 point = ray.origin + ray.direction * t;
+			normal = unit_vector(point - sp.pos);
 			max = t;
 		}
 	}
@@ -138,8 +140,9 @@ HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
 		if (t < max)
 		{
 			color = p.color;
+			normal = normal;
 		}
 	}
 
-	return { color, t };
+	return { color, normal, t };
 }

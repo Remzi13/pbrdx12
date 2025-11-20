@@ -21,6 +21,7 @@ struct Plane
 struct HitInfo
 {
 	Vector3 color;
+	Vector3 normal;
 	float dist;
 };
 
@@ -46,11 +47,6 @@ public:
 
 
 	HitInfo rayCast(const Ray& ray, float min, float max) const;
-
-	const std::vector<Sphere>& spheres() const { return spheres_; }
-	const std::vector<Plane>& planes() const { return planes_; }
-
-	size_t count() const { return spheres_.size() + planes_.size(); }
 
 private:
 	void parse( const std::string& filename );	

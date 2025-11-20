@@ -117,7 +117,8 @@ int main()
 				HitInfo hit = scene.rayCast(ray, tMin, tMax );
 				if (hit.dist < tMax)
 				{
-					color += hit.color;
+					//color += hit.color;
+					color += 0.5 * (hit.normal + Vector3(1.0f, 1.0f, 1.0f));
 				}
 				else
 				{
