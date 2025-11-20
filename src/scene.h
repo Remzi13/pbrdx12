@@ -18,6 +18,19 @@ struct Plane
 	float dist;
 };
 
+struct HitInfo
+{
+	Vector3 color;
+	float dist;
+};
+
+struct Ray
+{
+	Vector3 origin;
+	Vector3 direction;
+};
+
+
 class Scene
 {
 public:
@@ -30,6 +43,9 @@ public:
 	int samples() const { return samples_; }
 	int width() const { return width_; }
 	int height() const { return height_; }
+
+
+	HitInfo rayCast(const Ray& ray, float min, float max) const;
 
 	const std::vector<Sphere>& spheres() const { return spheres_; }
 	const std::vector<Plane>& planes() const { return planes_; }

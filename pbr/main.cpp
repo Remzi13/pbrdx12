@@ -11,11 +11,6 @@
 #include "../src/vector.h"
 #include "../src/scene.h"
 
-struct Ray
-{
-	Vector3 origin;
-	Vector3 direction;
-};
 
 float srgb( float x )
 {
@@ -69,41 +64,6 @@ float intersectPlane( Ray ray,  Vector3 poinOnPlane, Vector3 normPlane, float tM
 	}
 }
 
-float intersectPlane2( const Ray& ray, const Vector3& normal, float d, float tMin, float tMax )
- {
-	const float dist = dot( normal, ray.origin ) - d;
-	const float dotND = dot( ray.direction, normal );
-	if ( dotND == 0.0 )
-	{
-		if ( dist == 0.0 && tMin == 0.0)
-		{
-			return 0.0;
-		}
-		return tMax;
-	}
-	const float t = dist / -dotND;
-	if ( t< tMin || t > tMax )
-		return tMax;
-	return t;
-}
-
-float intersectSphere(const Ray& ray, const Vector3& center, float radius, float tMin, float tMax)
-{
-	const Vector3 origin = ray.origin - center; // сдвигаем сферу в центр 
-	const float A = 1;
-	const float B = 2.0 * dot( origin, ray.direction );
-	const float C = dot( origin, origin ) - radius * radius;
-	const float D = B * B - 4 * A * C;
-	if ( D < 0.0 )
-		return tMax;
-	const float sqrtD = std::sqrt( D );
-	const float t0 = ( -B - sqrtD ) / ( 2.0 * A );	
-	if ( t0 >= tMin && t0 < tMax ) return t0;
-	const float t1 = (-B + sqrtD) / (2.0 * A);
-	if ( t1 >= tMin && t1 < tMax ) return t1;
-	return tMax;
-}
-
 Vector3 getUniformSampleOffset( int index, int side_count )
 {
 	const float haflDist = 0.5 / side_count;
@@ -117,7 +77,7 @@ Vector3 getUniformSampleOffset( int index, int side_count )
 int main()
 {
 	Scene scene;
-	scene.load( "scene.txt" );
+	scene.load( "../scene.txt" );
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
@@ -154,27 +114,15 @@ int main()
 				
 				float tMax = 10000;
 				const Ray ray( { cameraOrigin, dir } );
-
-				float t = 0;
-				for ( const auto& sp : scene.spheres() )
+				HitInfo hit = scene.rayCast(ray, tMin, tMax );
+				if (hit.dist < tMax)
 				{
-					t = intersectSphere( ray, sp.pos, sp.radius, tMin, tMax );
-					if ( t < tMax )
-					{
-						c = sp.color;
-						tMax = t;
-					}
+					color += hit.color;
 				}
-
-				for ( const auto& p : scene.planes() )
+				else
 				{
-					t = intersectPlane2( ray, p.normal, p.dist, tMin, tMax );
-					if ( t < tMax )
-					{
-						c = p.color;
-					}
+					color += c;
 				}
-				color += c;
 			}
 
 			data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);

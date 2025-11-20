@@ -41,3 +41,5 @@
 
 # debug information files
 *.dwo
+/pbr/.idea
+/pbr/build

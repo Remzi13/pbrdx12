@@ -1,4 +1,4 @@
-#include "scene.h"
+Ôªø#include "scene.h"
 
 #include <string>
 #include <sstream>
@@ -21,6 +21,42 @@ namespace {
 		}
 		return std::stringstream( "" );
 	}
+
+	float intersectSphere(const Ray& ray, const Vector3& center, float radius, float tMin, float tMax)
+	{
+		const Vector3 origin = ray.origin - center; // —Å–¥–≤–∏–≥–∞–µ–º —Å—Ñ–µ—Ä—É –≤ —Ü–µ–Ω—Ç—Ä 
+		const float A = 1;
+		const float B = 2.0 * dot(origin, ray.direction);
+		const float C = dot(origin, origin) - radius * radius;
+		const float D = B * B - 4 * A * C;
+		if (D < 0.0)
+			return tMax;
+		const float sqrtD = std::sqrt(D);
+		const float t0 = (-B - sqrtD) / (2.0 * A);
+		if (t0 >= tMin && t0 < tMax) return t0;
+		const float t1 = (-B + sqrtD) / (2.0 * A);
+		if (t1 >= tMin && t1 < tMax) return t1;
+		return tMax;
+	}
+
+	float intersectPlane2(const Ray& ray, const Vector3& normal, float d, float tMin, float tMax)
+	{
+		const float dist = dot(normal, ray.origin) - d;
+		const float dotND = dot(ray.direction, normal);
+		if (dotND == 0.0)
+		{
+			if (dist == 0.0 && tMin == 0.0)
+			{
+				return 0.0;
+			}
+			return tMax;
+		}
+		const float t = dist / -dotND;
+		if (t< tMin || t > tMax)
+			return tMax;
+		return t;
+	}
+
 }
 
 
@@ -38,17 +74,17 @@ bool Scene::load( const char* name )
 void Scene::parse( const std::string& filename ) {
 	std::ifstream file( filename );
 	if ( !file.is_open() ) {
-		std::cerr << "Œ¯Ë·Í‡: ÕÂ Û‰‡ÎÓÒ¸ ÓÚÍ˚Ú¸ Ù‡ÈÎ " << filename << std::endl;
+		std::cerr << "Could not open file" << filename << std::endl;
 		return;
 	}
-	// 1. ◊ËÚ‡ÂÏ Ì‡ÒÚÓÈÍË ÒˆÂÌ˚ (width, height, samples)
+	// 1. √ó√®√≤√†√•√¨ √≠√†√±√≤√∞√Æ√©√™√® √±√∂√•√≠√ª (width, height, samples)
 	std::stringstream ss = getNextDataLine( file );
 	if ( ss.fail() )
 		return;
 
 	ss >> width_ >> height_ >> samples_;
 
-	// 2. ◊ËÚ‡ÂÏ —ÙÂ˚
+	// 2. √ó√®√≤√†√•√¨ √ë√¥√•√∞√ª
 	ss = getNextDataLine( file );
 	int numSpheres;
 	ss >> numSpheres;
@@ -65,7 +101,7 @@ void Scene::parse( const std::string& filename ) {
 		spheres_.push_back( sphere );
 	}
 
-	// 3. ◊ËÚ‡ÂÏ œÎÓÒÍÓÒÚË
+	// 3. √ó√®√≤√†√•√¨ √è√´√Æ√±√™√Æ√±√≤√®
 	ss = getNextDataLine( file );
 	int numPlanes;
 	ss >> numPlanes;
@@ -80,4 +116,30 @@ void Scene::parse( const std::string& filename ) {
 		p.color = Vector3( r, g, b );
 		planes_.push_back( p );
 	}
+}
+
+HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
+{	
+	float t = max;
+	Vector3 color;
+	for (const auto& sp : spheres_)
+	{
+		t = intersectSphere(ray, sp.pos, sp.radius, min, max);
+		if (t < max)
+		{
+			color = sp.color;
+			max = t;
+		}
+	}
+
+	for (const auto& p : planes_)
+	{
+		t = intersectPlane2(ray, p.normal, p.dist, min, max);
+		if (t < max)
+		{
+			color = p.color;
+		}
+	}
+
+	return { color, t };
 }
