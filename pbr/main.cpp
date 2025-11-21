@@ -34,13 +34,11 @@ void saveImageToFile( std::uint16_t width, std::uint16_t height, const std::vect
 		{
 			for ( int x = 0; x < width; ++x )
 			{
-
 				int r = srgb(data[y * width + x].x()) * 255; // R
 				int g = srgb(data[y * width + x].y()) * 255; // G
 				int b = srgb(data[y * width + x].z()) * 255; // B
 
 				outfile << r << " " << g << " " << b << " ";
-				
 			}
 			outfile << "\n";
 		}
@@ -87,6 +85,23 @@ float intersectPlane2( const Ray& ray, const Vector3& normal, float d, float tMi
 	return t;
 }
 
+float intersectTriangle( const Ray& ray, const Vector3& a, const Vector3& b, const Vector3& c, float tMin, float tMax )
+{
+	const Vector3 normal = unit_vector( cross( b- a, c - a ) );
+	const float d = dot( normal, a );
+	const float t = intersectPlane2( ray, normal, d, tMin, tMax );
+	if ( t == tMax )
+		return tMax;
+	const Vector3 p = ray.origin + ray.direction * t;
+	if ( dot( cross( b - a, p - a ), normal ) < 0.0f )
+		return tMax;
+	if ( dot( cross( c - b, p - b ), normal ) < 0.0f )
+		return tMax;
+	if ( dot( cross( a - c, p - c ), normal ) < 0.0f )
+		return tMax;
+	return t;
+}
+
 float intersectSphere(const Ray& ray, const Vector3& center, float radius, float tMin, float tMax)
 {
 	const Vector3 origin = ray.origin - center; // сдвигаем сферу в центр 
@@ -117,7 +132,7 @@ Vector3 getUniformSampleOffset( int index, int side_count )
 int main()
 {
 	Scene scene;
-	scene.load( "scene.txt" );
+	scene.load( "../scenes/02-scene-hard-v2.txt" );
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
@@ -155,6 +170,7 @@ int main()
 				float tMax = 10000;
 				const Ray ray( { cameraOrigin, dir } );
 
+				Vector3 hitNormal;
 				float t = 0;
 				for ( const auto& sp : scene.spheres() )
 				{
@@ -162,19 +178,42 @@ int main()
 					if ( t < tMax )
 					{
 						c = sp.color;
+						Vector3 pos = ray.origin + ray.direction * t;
+						Vector3 v = pos - sp.pos;
+						float l = v.length();
+						hitNormal = unit_vector( pos - sp.pos );
+						if ( dot( hitNormal, ray.direction ) > 0.0 )
+							hitNormal = -hitNormal;
 						tMax = t;
 					}
 				}
-
+				
 				for ( const auto& p : scene.planes() )
 				{
 					t = intersectPlane2( ray, p.normal, p.dist, tMin, tMax );
 					if ( t < tMax )
 					{
 						c = p.color;
+						hitNormal = p.normal;
+						if ( dot( hitNormal, ray.direction ) > 0.0 )
+							hitNormal = -hitNormal;
+						tMax = t;
 					}
 				}
-				color += c;
+				for ( const auto& tr : scene.triangles() )
+				{
+					t = intersectTriangle( ray, tr.a, tr.b, tr.c, tMin, tMax );
+					if ( t < tMax )
+					{
+						c = tr.color;
+						hitNormal = unit_vector( cross( tr.b - tr.a, tr.c - tr.a ) );
+						if ( dot( hitNormal, ray.direction ) > 0.0 )
+							hitNormal = -hitNormal;
+						tMax = t;
+					}
+				}
+				color += hitNormal * 0.5 + Vector3(0.5, 0.5, 0.5);
+				//color += c;
 			}
 
 			data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);

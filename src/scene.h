@@ -18,6 +18,14 @@ struct Plane
 	float dist;
 };
 
+struct Triangle
+{
+	Vector3 a;
+	Vector3 b;
+	Vector3 c;
+	Vector3 color;
+};
+
 class Scene
 {
 public:
@@ -33,6 +41,7 @@ public:
 
 	const std::vector<Sphere>& spheres() const { return spheres_; }
 	const std::vector<Plane>& planes() const { return planes_; }
+	const std::vector<Triangle>& triangles() const { return triangles_; }
 
 	size_t count() const { return spheres_.size() + planes_.size(); }
 
@@ -40,9 +49,11 @@ private:
 	void parse( const std::string& filename );	
 
 private:
+	int version_;
 	int samples_;
 	int width_;
 	int height_;
 	std::vector<Sphere> spheres_;
 	std::vector<Plane> planes_;
+	std::vector<Triangle> triangles_;
 };

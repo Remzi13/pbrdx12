@@ -45,6 +45,9 @@ void Scene::parse( const std::string& filename ) {
 	std::stringstream ss = getNextDataLine( file );
 	if ( ss.fail() )
 		return;
+	ss >> version_;
+
+	ss = getNextDataLine( file );
 
 	ss >> width_ >> height_ >> samples_;
 
@@ -79,5 +82,24 @@ void Scene::parse( const std::string& filename ) {
 		p.dist = dist;
 		p.color = Vector3( r, g, b );
 		planes_.push_back( p );
+	}
+
+	// 4. Читаем теругольники
+	ss = getNextDataLine( file );
+	int numTriangles;
+	ss >> numTriangles;
+
+	for ( int i = 0; i < numTriangles; ++i ) {
+		ss = getNextDataLine( file );
+
+		float x1, y1, z1, x2, y2, z2, x3, y3, z3, r, g, b;
+		ss >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3  >> r >> g >> b;
+
+		Triangle t;
+		t.a = Vector3( x1, y1, z1  );
+		t.b = Vector3( x2, y2, z2  );
+		t.c = Vector3( x3, y3, z3  );
+		t.color = Vector3( r, g, b );
+		triangles_.push_back( t );
 	}
 }
