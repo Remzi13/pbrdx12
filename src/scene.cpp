@@ -57,6 +57,23 @@ namespace {
 		return t;
 	}
 
+	float intefsectTriangle(const Ray& ray, const Vector3 a, const Vector3& b, const Vector3& c, float tMin, float tMax)
+	{	
+		const Vector3 normal = unit_vector(cross(b - a, c - a));
+		const float d = dot(normal, a);
+		const float t = intersectPlane2(ray, normal, d, tMin, tMax);
+		if (t == tMax)
+			return tMax;
+		const Vector3 p = ray.origin + ray.direction * t;
+		if (dot(cross(b - a, p - a), normal) < 0.0f)
+			return tMax;
+		if (dot(cross(c - b, p - b), normal) < 0.0f)
+			return tMax;
+		if (dot(cross(a - c, p - c), normal) < 0.0f)
+			return tMax;
+		return t;
+	}
+
 }
 
 
@@ -80,6 +97,9 @@ void Scene::parse( const std::string& filename ) {
 	std::stringstream ss = getNextDataLine( file );
 	if ( ss.fail() )
 		return;
+
+	ss >> version_;
+	ss = getNextDataLine(file);
 
 	ss >> width_ >> height_ >> samples_;
 
@@ -115,6 +135,25 @@ void Scene::parse( const std::string& filename ) {
 		p.color = Vector3( r, g, b );
 		planes_.push_back( p );
 	}
+
+	// 4. Triangles 
+	ss = getNextDataLine(file);
+	int numTriangles;
+	ss >> numTriangles;
+
+	for (int i = 0; i < numTriangles; ++i) {
+		ss = getNextDataLine(file);
+		
+		float x1, y1, z1, x2, y2, z2, x3, y3, z3, r, g, b;
+		ss >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3 >> r >> g >> b;
+		Triangle tr;
+		tr.a = Vector3(x1, y1, z1);
+		tr.b = Vector3(x2, y2, z2);
+		tr.c = Vector3(x3, y3, z3);
+		tr.color = Vector3(r, g, b);
+
+		triangles_.push_back(tr);
+	}
 }
 
 HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
@@ -140,9 +179,24 @@ HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
 		if (t < max)
 		{
 			color = p.color;
-			normal = normal;
+			normal = p.normal;
+			max = t;
 		}
 	}
+
+	for (const auto& tr : triangles_)
+	{
+		t = intefsectTriangle(ray, tr.a, tr.b, tr.c, min, max);
+		if (t < max)
+		{
+			color = tr.color;
+			normal = unit_vector(cross(tr.b - tr.a, tr.c - tr.a));
+			max = t;
+		}
+	}
+
+	if (dot(normal, ray.direction) > 0.0)
+		normal = -normal;
 
 	return { color, normal, t };
 }

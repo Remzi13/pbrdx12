@@ -1,0 +1,22 @@
+# Version
+2
+
+# Width, height, number of samples per side
+320 240 2
+
+# Number of spheres
+3
+# Position (x, y, z), radius, albedo (r, g, b)
+-2.0 -0.5 20.0 1.5 0.1 0.9 0.5
+0.0 -0.5 20.0 1.5 0.4 0.9 0.5
+2.0 -0.5 20.0 1.5 0.7 0.9 0.5
+
+# Number of planes
+1
+# Normal (x, y, z), distance, albedo (r, g, b)
+0.0 1.0 0.0 -1.0 0.5 0.5 0.5
+
+# Number of planes
+1
+# A (x, y, z), B (x, y, z), C(x, y, z), albedo (r, g, b)
+1.5 -1.5 5.0 -1.5 -1.5 5.0 1.5 1.5 5.0 0.630605085192 0.608514898419 0.0994104821854

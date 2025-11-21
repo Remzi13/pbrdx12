@@ -31,6 +31,14 @@ struct Ray
 	Vector3 direction;
 };
 
+struct Triangle
+{
+	Vector3 a;
+	Vector3 b;
+	Vector3 c;
+	Vector3 color;
+};
+
 
 class Scene
 {
@@ -45,16 +53,17 @@ public:
 	int width() const { return width_; }
 	int height() const { return height_; }
 
-
 	HitInfo rayCast(const Ray& ray, float min, float max) const;
 
 private:
 	void parse( const std::string& filename );	
 
 private:
+	int version_;
 	int samples_;
 	int width_;
 	int height_;
 	std::vector<Sphere> spheres_;
 	std::vector<Plane> planes_;
+	std::vector<Triangle> triangles_;
 };

@@ -77,7 +77,7 @@ Vector3 getUniformSampleOffset( int index, int side_count )
 int main()
 {
 	Scene scene;
-	scene.load( "../scene.txt" );
+	scene.load( "../scenes/02-scene-hard-v2.txt" );
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
