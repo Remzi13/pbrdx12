@@ -6,6 +6,7 @@
 #include <ostream>
 #include <iosfwd>
 #include <fstream>
+#include <algorithm>
 
 namespace {
 	std::stringstream getNextDataLine( std::ifstream& file )
@@ -87,6 +88,16 @@ bool Scene::load( const char* name )
 	return true;
 }
 
+Vector3 farPointZ(const Triangle& t)
+{
+	Vector3 f = t.a;
+	if (f.z() > t.b.z())
+		f = t.b;
+	if (f.z() > t.c.z())
+		f = t.c;
+	return f;
+}
+
 void Scene::parse( const std::string& filename ) {
 	std::ifstream file( filename );
 	if ( !file.is_open() ) {
@@ -107,7 +118,7 @@ void Scene::parse( const std::string& filename ) {
 	ss = getNextDataLine( file );
 	int numSpheres;
 	ss >> numSpheres;
-
+	spheres_.reserve(numSpheres);
 	for ( int i = 0; i < numSpheres; ++i ) {
 		ss = getNextDataLine( file );
 		Sphere sphere;
@@ -124,7 +135,7 @@ void Scene::parse( const std::string& filename ) {
 	ss = getNextDataLine( file );
 	int numPlanes;
 	ss >> numPlanes;
-
+	planes_.reserve(numPlanes);
 	for ( int i = 0; i < numPlanes; ++i ) {
 		ss = getNextDataLine( file );
 		Plane p;
@@ -140,7 +151,7 @@ void Scene::parse( const std::string& filename ) {
 	ss = getNextDataLine(file);
 	int numTriangles;
 	ss >> numTriangles;
-
+	triangles_.reserve(numTriangles);
 	for (int i = 0; i < numTriangles; ++i) {
 		ss = getNextDataLine(file);
 		
@@ -154,6 +165,12 @@ void Scene::parse( const std::string& filename ) {
 
 		triangles_.push_back(tr);
 	}
+
+	std::sort(triangles_.begin(), triangles_.end(), [](const Triangle& a, const Triangle& b) {
+		const Vector3 farA = farPointZ(a);
+		const Vector3 farB = farPointZ(b);
+		return farA.z() < farB.z();
+	});
 }
 
 HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
@@ -186,13 +203,17 @@ HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
 
 	for (const auto& tr : triangles_)
 	{
-		t = intefsectTriangle(ray, tr.a, tr.b, tr.c, min, max);
+ 		t = intefsectTriangle(ray, tr.a, tr.b, tr.c, min, max);
 		if (t < max)
 		{
 			color = tr.color;
 			normal = unit_vector(cross(tr.b - tr.a, tr.c - tr.a));
 			max = t;
+			Vector3 far = farPointZ(tr);
+			if (t > far.z())
+				break;
 		}
+		
 	}
 
 	if (dot(normal, ray.direction) > 0.0)
