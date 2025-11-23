@@ -29,6 +29,20 @@ struct Primitive
 	Vector4 color;
 };
 
+struct RTrinangle
+{
+	Vector3 a;
+	float _padA;
+	Vector3 b;
+	float _padB;
+	Vector3 c;
+	float _padC;
+
+	Vector3 color;
+	float _padColor;
+};
+
+
 class Camera
 {
 public:
@@ -94,6 +108,7 @@ private:
 
 	std::uint16_t frameIndex_ = 0;
 
-	StructuredBuffer<Primitive> sceneBuffer_;
+	StructuredBuffer<Primitive> scenePrimitives_;
+	StructuredBuffer<RTrinangle> sceneTriangles_;
 };
 

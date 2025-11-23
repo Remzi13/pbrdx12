@@ -88,15 +88,6 @@ bool Scene::load( const char* name )
 	return true;
 }
 
-Vector3 farPointZ(const Triangle& t)
-{
-	Vector3 f = t.a;
-	if (f.z() > t.b.z())
-		f = t.b;
-	if (f.z() > t.c.z())
-		f = t.c;
-	return f;
-}
 
 void Scene::parse( const std::string& filename ) {
 	std::ifstream file( filename );
@@ -166,11 +157,6 @@ void Scene::parse( const std::string& filename ) {
 		triangles_.push_back(tr);
 	}
 
-	std::sort(triangles_.begin(), triangles_.end(), [](const Triangle& a, const Triangle& b) {
-		const Vector3 farA = farPointZ(a);
-		const Vector3 farB = farPointZ(b);
-		return farA.z() < farB.z();
-	});
 }
 
 HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
@@ -208,10 +194,7 @@ HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
 		{
 			color = tr.color;
 			normal = unit_vector(cross(tr.b - tr.a, tr.c - tr.a));
-			max = t;
-			Vector3 far = farPointZ(tr);
-			if (t > far.z())
-				break;
+			max = t;			
 		}
 		
 	}

@@ -21,7 +21,7 @@ bool App::init( HWND hwnd )
 	hwnd_ = hwnd;
 	camera_.setPos( { 0, 0, 0 } );
 	g_lastTime = std::chrono::high_resolution_clock::now();
-	scene_.load( "scene.txt" );
+	scene_.load( "../pbr/scenes/02-scene-hard-v2.txt" );
 	return render_.init( hwnd, scene_);
 }
 

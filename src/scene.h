@@ -55,6 +55,11 @@ public:
 
 	HitInfo rayCast(const Ray& ray, float min, float max) const;
 
+	size_t count() const { return spheres_.size() + planes_.size(); }
+	const std::vector<Sphere>& spheres() const { return spheres_; }
+	const std::vector<Plane>& planes() const { return planes_; }
+	const std::vector<Triangle>& triangles() const { return triangles_; }
+
 private:
 	void parse( const std::string& filename );	
 
