@@ -38,6 +38,11 @@ public:
 		return *this;
 	}
 
+	bool operator==(const Vector3& u)
+	{
+		return d[0] == u[0] && d[1] == u[1] && d[2] == u[2];
+	}
+
 	Vector3& operator/=( float t ) {
 		return *this *= 1 / t;
 	}

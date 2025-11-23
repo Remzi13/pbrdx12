@@ -174,7 +174,6 @@ HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount, 
 {
     HitInfo closestHit = { FLT_MAX, float3( 0,0,0 ), float3( 0,0,0 ) };
 
-    // primitiveCount берется из cbuffer SceneConstants
     for ( uint i = 0; i < primitiveCount; i++ )
     {
         Primitive p = ScenePrimitives[i];
