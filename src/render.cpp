@@ -125,8 +125,9 @@ struct SceneParameters
 	float _pad3;
 
 	uint32_t primitiveCount;
+	uint32_t trianglesCount;
 	uint32_t sampleCount;
-	float _pad_end[2];
+	float _pad_end[1];
 };
 
 SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const Vector3& cameraCenter)
@@ -360,7 +361,7 @@ bool Render::init(HWND hwnd, const Scene& scene)
 
 	// Диапазон 2: SRV (Structured Buffer, t0)
 	CD3DX12_DESCRIPTOR_RANGE srvRange;
-	srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); // 1 дескриптор в t0
+	srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0); // 1 дескриптор в t0
 
 	// 2. Создаем массив диапазонов для одной таблицы
 	// Таблица будет включать UAV, а затем SRV
@@ -415,7 +416,7 @@ bool Render::init(HWND hwnd, const Scene& scene)
 
 	// 1. Создание Кучи Дескрипторов для UAV
 	D3D12_DESCRIPTOR_HEAP_DESC uavHeapDesc = {};
-	uavHeapDesc.NumDescriptors = 2;
+	uavHeapDesc.NumDescriptors = 3;
 	uavHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	uavHeapDesc.Flags =
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE; // Должен быть виден шейдеру!
@@ -493,6 +494,7 @@ bool Render::init(HWND hwnd, const Scene& scene)
 
 	SceneParameters params = calcSceneParam(width_, height_, camera_center);
 	params.primitiveCount = scene.count();
+	params.trianglesCount = scene.triangles().size();
 	params.sampleCount = scene.samples();
 
 	g_buffer.create(device_.Get(), params, L"SceneParameters");
@@ -529,24 +531,57 @@ void Render::createSceneSRV(const Scene& scene)
 		primitives.emplace_back( p );
 	}
 
+	std::vector<RTrinangle> triangles;
+	triangles.reserve(scene.triangles().size());
+	for (const auto& tr : scene.triangles())
+	{
+		RTrinangle triangle;
+		triangle.a = Vector3(tr.a.x(), tr.a.y(), tr.a.z());
+		triangle.b = Vector3(tr.b.x(), tr.b.y(), tr.b.z());
+		triangle.c = Vector3(tr.c.x(), tr.c.y(), tr.c.z());
+		triangle.color = tr.color;
+
+		triangles.emplace_back(triangle);
+	}
+	
+
 	// Создаем новый с актуальными данными
-	sceneBuffer_.create( device_.Get(), primitives.data(), (std::uint32_t)primitives.size(), L"ScenePrim" );
+	scenePrimitives_.create( device_.Get(), primitives.data(), (std::uint32_t)primitives.size(), L"ScenePrimtives" );
+	sceneTriangles_.create(device_.Get(), triangles.data(), (std::uint32_t)triangles.size(), L"SceneTriangles");
 
-	UINT elementCount = sceneBuffer_.getCount();
-	ID3D12Resource* sbResource = sceneBuffer_.getResource();
+	{
+		UINT elementCount = scenePrimitives_.getCount();
+		ID3D12Resource* sbResource = scenePrimitives_.getResource();
 
-	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
-	srvDesc.Format = DXGI_FORMAT_UNKNOWN;
-	srvDesc.Buffer.FirstElement = 0;
-	srvDesc.Buffer.NumElements = elementCount;
-	srvDesc.Buffer.StructureByteStride = sizeof(Primitive);
-	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+		srvDesc.Buffer.FirstElement = 0;
+		srvDesc.Buffer.NumElements = elementCount;
+		srvDesc.Buffer.StructureByteStride = sizeof(Primitive);
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
-	UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);	
-	CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(uavHeap_->GetCPUDescriptorHandleForHeapStart(), 1, descriptorSize);
+		UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(uavHeap_->GetCPUDescriptorHandleForHeapStart(), 1, descriptorSize);
+		device_->CreateShaderResourceView(sbResource, &srvDesc, srvHandle);
+	}
+	{
+		UINT elementCount = sceneTriangles_.getCount();
+		ID3D12Resource* sbResource = sceneTriangles_.getResource();
 
-	device_->CreateShaderResourceView(sbResource, &srvDesc, srvHandle);
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+		srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+		srvDesc.Buffer.FirstElement = 0;
+		srvDesc.Buffer.NumElements = elementCount;
+		srvDesc.Buffer.StructureByteStride = sizeof(Primitive);
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+		UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(uavHeap_->GetCPUDescriptorHandleForHeapStart(), 2, descriptorSize);
+		device_->CreateShaderResourceView(sbResource, &srvDesc, srvHandle);
+	}
+	
 }
 
 void Render::draw()
@@ -733,6 +768,7 @@ void Render::update(const Camera& camera, const Scene& scene, bool isDirty, floa
 {
 	SceneParameters param = calcSceneParam(width_, height_, camera.pos());
 	param.primitiveCount = static_cast<uint32_t>(scene.count());
+	param.trianglesCount = static_cast<uint32_t>(scene.triangles().size());
 	param.sampleCount = static_cast<uint32_t>( scene.samples() );
 
 	g_buffer.update( param );
@@ -740,7 +776,8 @@ void Render::update(const Camera& camera, const Scene& scene, bool isDirty, floa
 	if (isDirty && scene.count() > 0)
 	{
 		// Освобождаем старый буфер
-		sceneBuffer_.release();
+		scenePrimitives_.release();
+		sceneTriangles_.release();
 		createSceneSRV(scene);
 	}
 }
@@ -749,7 +786,8 @@ void Render::update(const Camera& camera, const Scene& scene, bool isDirty, floa
 void Render::fini() 
 {
 	g_buffer.release();
-	sceneBuffer_.release();
+	sceneTriangles_.release();
+	scenePrimitives_.release();
 
 	wait();
 	CloseHandle(fenceEvent_);

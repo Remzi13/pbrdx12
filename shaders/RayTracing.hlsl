@@ -31,8 +31,9 @@ cbuffer SceneConstants : register(b0)
     float _pad3;
         
     uint primitiveCount;
+    uint trianglesCount;
     uint sampleCount;
-    float2 _pad5;
+    float _pad5;
 };
 
 struct Primitive
@@ -44,8 +45,21 @@ struct Primitive
     float4 normal_color;
 };
 
+struct Triangle
+{
+    float3 a;
+    float _padA;
+    float3 b;
+    float _padB;
+    float3 c;
+    float _padC;
+    float3 color;
+    float _padColort;
+};
+
 // Structured Buffer (Регистр t0: Shader Resource View)
-StructuredBuffer<Primitive> SceneData : register( t0 );
+StructuredBuffer<Primitive> ScenePrimitives : register( t0 );
+StructuredBuffer<Triangle> SceneTriangles : register( t1 );
 //--------------------------------------------------------------------------------------
 // Вспомогательные Функции
 //--------------------------------------------------------------------------------------
@@ -135,14 +149,35 @@ HitInfo IntersectPlane2( float3 rayOrigin, float3 rayDirection, float3 normalPla
     return hit;
 }
 
-HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount )
+HitInfo IntefsectTriangle(float3 rayOrigin, float3 rayDirection, float3 a, float3 b, float3 c, float3 color)
+{
+    const HitInfo hitMax = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
+    HitInfo hit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
+    const float3 normal = normalize(cross(b - a, c - a));
+    const float d = dot(normal, a);
+    
+    hit = IntersectPlane2(rayOrigin, rayDirection, normal, d, color);
+    
+    if (hit.t == FLT_MAX)
+        return hitMax;
+    float3 p = rayOrigin + rayDirection * hit.t;
+    if (dot(cross(b - a, p - a), normal) < 0.0f)
+        return hitMax;
+    if (dot(cross(c - b, p - b), normal) < 0.0f)
+        return hitMax;
+    if (dot(cross(a - c, p - c), normal) < 0.0f)
+        return hitMax;
+    return hit;
+}
+
+HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount, uint trianglesCount )
 {
     HitInfo closestHit = { FLT_MAX, float3( 0,0,0 ), float3( 0,0,0 ) };
 
     // primitiveCount берется из cbuffer SceneConstants
     for ( uint i = 0; i < primitiveCount; i++ )
     {
-        Primitive p = SceneData[i];
+        Primitive p = ScenePrimitives[i];
         HitInfo currentHit;
 
         if ( p.type == TYPE_SPHERE )
@@ -166,6 +201,16 @@ HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount )
         if ( currentHit.t > 0.001 && currentHit.t < closestHit.t )
         {
             closestHit = currentHit;
+        }
+    }
+    for (uint i = 0; i < trianglesCount; i++)
+    {
+        Triangle tr = SceneTriangles[i];
+        HitInfo currentHit = IntefsectTriangle(rayOrigin, rayDirection, tr.a, tr.b, tr.c, tr.color);
+        
+        if (currentHit.t > 0.001 && currentHit.t < closestHit.t)
+        {
+            closestHit = currentHit;                        
         }
     }
     return closestHit;
@@ -215,7 +260,7 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
         // 3. Направление луча (Direction) - Должно быть нормализовано!
         float3 rayDirection = normalize( pixel_center - rayOrigin );
 
-        HitInfo hit = TraceScene( rayOrigin, rayDirection, primitiveCount );
+        HitInfo hit = TraceScene( rayOrigin, rayDirection, primitiveCount, trianglesCount );
 
         float4 color;
 

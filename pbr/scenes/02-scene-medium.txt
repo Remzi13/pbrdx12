@@ -16,7 +16,7 @@
 # Normal (x, y, z), distance, albedo (r, g, b)
 0.0 1.0 0.0 -1.0 0.5 0.5 0.5
 
-# Number of planes
+# Number of triangles
 51
 # A (x, y, z), B (x, y, z), C(x, y, z), albedo (r, g, b)
 -1.5 -1.5 5.0 1.5 -1.5 5.0 1.5 1.5 5.0 0.565080965009 0.962082324227 0.671228052522
