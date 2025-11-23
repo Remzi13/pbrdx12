@@ -7,77 +7,139 @@
 #include <math.h>
 #include <sstream>
 #include <chrono>
+#include <random>
 
 #include "../src/vector.h"
 #include "../src/scene.h"
 
 
-float srgb( float x )
-{
-	return std::pow( x, 1 / 2.2 );
-}
+namespace {
 
-void saveImageToFile( std::uint16_t width, std::uint16_t height, const std::vector<Vector3>& data )
-{
-	std::ofstream outfile( "output.ppm", std::ios::out | std::ios::binary );
-
-	if ( outfile.is_open() )
+	float srgb(float x)
 	{
-		outfile << "P3\n" << width << " " << height << "\n255\n";
-		
-		for ( int y = 0; y < height; ++y )
+		return x;
+		return std::pow(x, 1 / 2.2);
+	}
+
+	void saveImageToFile(std::uint16_t width, std::uint16_t height, const std::vector<Vector3>& data)
+	{
+		std::ofstream outfile("output.ppm", std::ios::out | std::ios::binary);
+
+		if (outfile.is_open())
 		{
-			for ( int x = 0; x < width; ++x )
+			outfile << "P3\n" << width << " " << height << "\n255\n";
+
+			for (int y = 0; y < height; ++y)
 			{
+				for (int x = 0; x < width; ++x)
+				{
 
-				int r = srgb(data[y * width + x].x()) * 255; // R
-				int g = srgb(data[y * width + x].y()) * 255; // G
-				int b = srgb(data[y * width + x].z()) * 255; // B
+					int r = srgb(data[y * width + x].x()) * 255; // R
+					int g = srgb(data[y * width + x].y()) * 255; // G
+					int b = srgb(data[y * width + x].z()) * 255; // B
 
-				outfile << r << " " << g << " " << b << " ";
-				
+					outfile << r << " " << g << " " << b << " ";
+
+				}
+				outfile << "\n";
 			}
-			outfile << "\n";
+			outfile.close();
+
+			// Сообщаем о сохранении
+			printf("Image saved to output.ppm\n");
 		}
-		outfile.close();
-
-		// Сообщаем о сохранении
-		printf( "Image saved to output.ppm\n" );
+		else
+		{
+			printf("Error: Could not open output.ppm for writing.\n");
+		}
 	}
-	else
+
+	//можно использовать точку и дистанцию 
+	float intersectPlane(Ray ray, Vector3 poinOnPlane, Vector3 normPlane, float tMin, float tMax)
 	{
-		printf( "Error: Could not open output.ppm for writing.\n" );
+		float t = dot((poinOnPlane - ray.origin), normPlane) / dot(ray.direction, normPlane);
+		if (t > tMin && t < tMax)
+		{
+			return t;
+		}
+		else
+		{
+			return tMax;
+		}
 	}
-}
 
-//можно использовать точку и дистанцию 
-float intersectPlane( Ray ray,  Vector3 poinOnPlane, Vector3 normPlane, float tMin, float tMax )
-{
-	float t =  dot( (poinOnPlane - ray.origin ) , normPlane ) / dot( ray.direction , normPlane );
-	if ( t > tMin && t < tMax )
+	Vector3 getUniformSampleOffset(int index, int side_count)
 	{
-		return t;
+		const float haflDist = 0.5 / side_count;
+		const float dist = 1.0 / side_count;
+		const float x = index % side_count;
+		const float y = std::floor(index / side_count);
+		return Vector3(haflDist + x * dist, haflDist + y * dist, 0.0);
 	}
-	else
+
+	float randomFloat() 
 	{
-		return tMax;
+		static std::uniform_real_distribution<float> distribution(0.0, 1.0);
+		static std::mt19937 generator;
+		return distribution(generator);
 	}
+
+	float randFloat(float min, float max)
+	{
+		return min + (max - min) * (randomFloat());
+	}
+
+	Vector3 randVector(float min, float max)
+	{
+		return Vector3(randFloat(min, max), randFloat(min, max), randFloat(min, max));
+	}
+
+	Vector3 randUnitVector()
+	{
+		while (true)
+		{
+			Vector3 p = randVector(-1, 1);
+			float l = p.length_squared();
+			if (1e-160 < l && l <= 1)
+				return p / std::sqrt(l);
+		}
+	}
+
+	Vector3 randOnHemispher(const Vector3& normal)
+	{
+		Vector3 onSphere = randUnitVector();
+		if (dot(onSphere, normal) > 0.0)
+			return onSphere;
+		else
+			return -onSphere;
+	}
+
+	Vector3 rayColor(const Ray& ray, const Scene& scene, int depth, float tMin, float tMax)
+	{
+		Vector3 color;
+		if (depth <= 0)
+			return color;
+
+		const HitInfo hit = scene.rayCast(ray, tMin, tMax);
+		
+		if (hit.dist < tMax)
+		{
+			const Vector3 dir = randOnHemispher(hit.normal);
+			const Vector3 pos = ray.origin + ray.direction * hit.dist;			
+			return 0.5 * rayColor({ pos, dir }, scene, depth - 1, tMin, tMax);
+		}
+		
+		Vector3 unit_direction = unit_vector(ray.direction);
+		auto a = 0.5 * (unit_direction.y() + 1.0);
+		return (1.0 - a) * Vector3(1.0, 1.0, 1.0) + a * Vector3(0.5, 0.7, 1.0);
+	}
+
 }
-
-Vector3 getUniformSampleOffset( int index, int side_count )
-{
-	const float haflDist = 0.5 / side_count;
-	const float dist = 1.0 / side_count;
-	const float x = index % side_count;
-	const float y = std::floor( index / side_count );
-	return Vector3( haflDist + x * dist, haflDist + y * dist, 0.0 );
-}
-
-
 int main()
 {
 	Scene scene;
-	scene.load( "../scenes/02-scene-hard-v2.txt" );
+	//scene.load( "../scenes/02-scene-easy.txt" );
+	scene.load("../scenes/02-scene-hard-v2.txt");
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
@@ -110,15 +172,15 @@ int main()
 
 				const Vector3 dir = unit_vector( pixPos - cameraOrigin );
 
-				Vector3 c = Vector3( dir.x() * 0.5 + 0.5, dir.y() * 0.5 + 0.5, dir.z() * 0.5 + 0.5 );
-				
+
 				float tMax = 10000;
 				const Ray ray( { cameraOrigin, dir } );
-				HitInfo hit = scene.rayCast(ray, tMin, tMax );
-				if (hit.dist < tMax)
+
+				Vector3 c;
+				c =  rayColor(ray, scene, 10,  tMin, tMax);
+				if (c == Vector3())
 				{
-					color += hit.color;
-					//color += 0.5 * (hit.normal + Vector3(1.0f, 1.0f, 1.0f));
+					color += Vector3(dir.x() * 0.5 + 0.5, dir.y() * 0.5 + 0.5, dir.z() * 0.5 + 0.5);
 				}
 				else
 				{

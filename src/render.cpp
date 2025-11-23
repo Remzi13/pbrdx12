@@ -367,15 +367,15 @@ bool Render::init(HWND hwnd, const Scene& scene)
 	// Таблица будет включать UAV, а затем SRV
 	CD3DX12_DESCRIPTOR_RANGE ranges[2];
 	ranges[0] = uavRange;
-	ranges[1] = srvRange; // <--- НОВЫЙ ДИАПАЗОН
+	ranges[1] = srvRange;
 
 	// 3. Определяем параметры Root Signature
 	CD3DX12_ROOT_PARAMETER rootParameters[2];
 
 	// ПАРАМЕТР 0: Таблица дескрипторов для UAV (u0) И SRV (t0)
 	rootParameters[0].InitAsDescriptorTable(
-		2, // <--- Теперь 2 диапазона!
-		ranges, // <--- Используем массив ranges
+		2,
+		ranges,
 		D3D12_SHADER_VISIBILITY_ALL
 	);
 
@@ -469,7 +469,7 @@ bool Render::init(HWND hwnd, const Scene& scene)
 		1, // NumSubresources
 		0, // BaseOffset (должен быть 0)
 		&Footprint, &tempNumRows, &tempRowSizeInBytes,
-		&TotalBytes // <--- Теперь TotalBytes будет корректно инициализирован!
+		&TotalBytes
 	);
 
 	RowSizeInBytes = Footprint.Footprint.RowPitch;
@@ -479,7 +479,7 @@ bool Render::init(HWND hwnd, const Scene& scene)
 
 	// Описание ресурса: Буфер, размером в TotalBytes
 	D3D12_RESOURCE_DESC readBackDesc =
-		CD3DX12_RESOURCE_DESC::Buffer(TotalBytes); // Используем полученный размер
+		CD3DX12_RESOURCE_DESC::Buffer(TotalBytes);
 
 	if (FAILED(device_->CreateCommittedResource(
 		&readBackHeapProps, D3D12_HEAP_FLAG_NONE, &readBackDesc,

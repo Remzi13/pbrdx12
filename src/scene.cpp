@@ -9,18 +9,18 @@
 #include <algorithm>
 
 namespace {
-	std::stringstream getNextDataLine( std::ifstream& file )
+	std::stringstream getNextDataLine(std::ifstream& file)
 	{
 		std::string line;
-		while ( std::getline( file, line ) ) {
-			size_t firstChar = line.find_first_not_of( " \t\r\n" );
+		while (std::getline(file, line)) {
+			size_t firstChar = line.find_first_not_of(" \t\r\n");
 
-			if ( firstChar == std::string::npos || line[firstChar] == '#' ) {
+			if (firstChar == std::string::npos || line[firstChar] == '#') {
 				continue;
 			}
-			return std::stringstream( line );
+			return std::stringstream(line);
 		}
-		return std::stringstream( "" );
+		return std::stringstream("");
 	}
 
 	float intersectSphere(const Ray& ray, const Vector3& center, float radius, float tMin, float tMax)
@@ -59,7 +59,7 @@ namespace {
 	}
 
 	float intefsectTriangle(const Ray& ray, const Vector3 a, const Vector3& b, const Vector3& c, float tMin, float tMax)
-	{	
+	{
 		const Vector3 normal = unit_vector(cross(b - a, c - a));
 		const float d = dot(normal, a);
 		const float t = intersectPlane2(ray, normal, d, tMin, tMax);
@@ -79,25 +79,25 @@ namespace {
 
 
 Scene::Scene()
-{	
+{
 }
 
-bool Scene::load( const char* name )
+bool Scene::load(const char* name)
 {
-	parse( name );
+	parse(name);
 	return true;
 }
 
 
-void Scene::parse( const std::string& filename ) {
-	std::ifstream file( filename );
-	if ( !file.is_open() ) {
+void Scene::parse(const std::string& filename) {
+	std::ifstream file(filename);
+	if (!file.is_open()) {
 		std::cerr << "Could not open file" << filename << std::endl;
 		return;
 	}
 	// 1. ×èòàåì íàñòðîéêè ñöåíû (width, height, samples)
-	std::stringstream ss = getNextDataLine( file );
-	if ( ss.fail() )
+	std::stringstream ss = getNextDataLine(file);
+	if (ss.fail())
 		return;
 
 	ss >> version_;
@@ -106,36 +106,36 @@ void Scene::parse( const std::string& filename ) {
 	ss >> width_ >> height_ >> samples_;
 
 	// 2. ×èòàåì Ñôåðû
-	ss = getNextDataLine( file );
+	ss = getNextDataLine(file);
 	int numSpheres;
 	ss >> numSpheres;
 	spheres_.reserve(numSpheres);
-	for ( int i = 0; i < numSpheres; ++i ) {
-		ss = getNextDataLine( file );
+	for (int i = 0; i < numSpheres; ++i) {
+		ss = getNextDataLine(file);
 		Sphere sphere;
 		float x, y, z, rad, r, g, b;
 		ss >> x >> y >> z >> rad >> r >> g >> b;
-		sphere.pos = Vector3( x, y, z );
-		sphere.color = Vector3( r, g, b );
+		sphere.pos = Vector3(x, y, z);
+		sphere.color = Vector3(r, g, b);
 		sphere.radius = rad;
 
-		spheres_.push_back( sphere );
+		spheres_.push_back(sphere);
 	}
 
 	// 3. ×èòàåì Ïëîñêîñòè
-	ss = getNextDataLine( file );
+	ss = getNextDataLine(file);
 	int numPlanes;
 	ss >> numPlanes;
 	planes_.reserve(numPlanes);
-	for ( int i = 0; i < numPlanes; ++i ) {
-		ss = getNextDataLine( file );
+	for (int i = 0; i < numPlanes; ++i) {
+		ss = getNextDataLine(file);
 		Plane p;
 		float x, y, z, dist, r, g, b;
 		ss >> x >> y >> z >> dist >> r >> g >> b;
-		p.normal = Vector3( x, y, z );
+		p.normal = Vector3(x, y, z);
 		p.dist = dist;
-		p.color = Vector3( r, g, b );
-		planes_.push_back( p );
+		p.color = Vector3(r, g, b);
+		planes_.push_back(p);
 	}
 
 	// 4. Triangles 
@@ -145,7 +145,7 @@ void Scene::parse( const std::string& filename ) {
 	triangles_.reserve(numTriangles);
 	for (int i = 0; i < numTriangles; ++i) {
 		ss = getNextDataLine(file);
-		
+
 		float x1, y1, z1, x2, y2, z2, x3, y3, z3, r, g, b;
 		ss >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3 >> r >> g >> b;
 		Triangle tr;
@@ -159,48 +159,55 @@ void Scene::parse( const std::string& filename ) {
 
 }
 
-HitInfo Scene::rayCast(const Ray& ray, float min, float max) const
-{	
-	float t = max;
+HitInfo Scene::rayCast(const Ray& ray, float tMin, float tMax) const
+{
+	float closest = tMax;
 	Vector3 color;
 	Vector3 normal;
+	bool hit = false;
+
 	for (const auto& sp : spheres_)
 	{
-		t = intersectSphere(ray, sp.pos, sp.radius, min, max);
-		if (t < max)
+		float t = intersectSphere(ray, sp.pos, sp.radius, tMin, closest);
+		if (t < closest)
 		{
+			hit = true;
+			closest = t;
 			color = sp.color;
 			const Vector3 point = ray.origin + ray.direction * t;
 			normal = unit_vector(point - sp.pos);
-			max = t;
 		}
 	}
 
 	for (const auto& p : planes_)
 	{
-		t = intersectPlane2(ray, p.normal, p.dist, min, max);
-		if (t < max)
+		float t = intersectPlane2(ray, p.normal, p.dist, tMin, closest);
+		if (t < closest)
 		{
+			hit = true;
+			closest = t;
 			color = p.color;
 			normal = p.normal;
-			max = t;
 		}
 	}
 
 	for (const auto& tr : triangles_)
 	{
- 		t = intefsectTriangle(ray, tr.a, tr.b, tr.c, min, max);
-		if (t < max)
+		float t = intefsectTriangle(ray, tr.a, tr.b, tr.c, tMin, closest);
+		if (t < closest)
 		{
+			hit = true;
+			closest = t;
 			color = tr.color;
 			normal = unit_vector(cross(tr.b - tr.a, tr.c - tr.a));
-			max = t;			
 		}
-		
 	}
 
-	if (dot(normal, ray.direction) > 0.0)
+	if (!hit)
+		return { Vector3(), Vector3(), tMax }; // no hit
+
+	if (dot(normal, ray.direction) > 0)
 		normal = -normal;
 
-	return { color, normal, t };
+	return { color, normal, closest };
 }
