@@ -574,7 +574,7 @@ void Render::createSceneSRV(const Scene& scene)
 		srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 		srvDesc.Buffer.FirstElement = 0;
 		srvDesc.Buffer.NumElements = elementCount;
-		srvDesc.Buffer.StructureByteStride = sizeof(Primitive);
+		srvDesc.Buffer.StructureByteStride = sizeof(RTrinangle);
 		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
 		UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
