@@ -57,6 +57,12 @@ struct Triangle
     float _padColort;
 };
 
+struct Ray
+{
+    float3 origin;
+    float3 direction;
+};
+
 // Structured Buffer (Регистр t0: Shader Resource View)
 StructuredBuffer<Primitive> ScenePrimitives : register( t0 );
 StructuredBuffer<Triangle> SceneTriangles : register( t1 );
@@ -65,16 +71,16 @@ StructuredBuffer<Triangle> SceneTriangles : register( t1 );
 //--------------------------------------------------------------------------------------
 
 // Функция для трассировки луча со сферой (Оптимизирована: a = 1.0)
-HitInfo IntersectSphere(float3 rayOrigin, float3 rayDirection, float3 sphereCenter, float sphereRadius)
+HitInfo IntersectSphere(Ray ray, float3 sphereCenter, float sphereRadius)
 {
     HitInfo hit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
 
     // Вектор от начала луча до центра сферы: oc = A - C
-    float3 oc = rayOrigin - sphereCenter;
+    float3 oc = ray.origin - sphereCenter;
 
     // Квадратное уравнение: at^2 + bt + c = 0
     // Так как rayDirection нормализован, a = 1.0. 
-    float b = 2.0 * dot(oc, rayDirection);
+    float b = 2.0 * dot(oc, ray.direction);
     float c = dot(oc, oc) - sphereRadius * sphereRadius;
 
     // Дискриминант: D = b^2 - 4ac. Т.к. a=1, то D = b^2 - 4c
@@ -91,7 +97,7 @@ HitInfo IntersectSphere(float3 rayOrigin, float3 rayDirection, float3 sphereCent
         {
             hit.t = t;
             
-            float3 hitPoint = rayOrigin + rayDirection * t;
+            float3 hitPoint = ray.origin + ray.direction* t;
             hit.normal = normalize(hitPoint - sphereCenter);
             return hit;
         }
@@ -128,11 +134,11 @@ HitInfo IntersectPlane( float3 rayOrigin, float3 rayDirection, float3 pointOnPla
     return hit;
 }
 
-HitInfo IntersectPlane2( float3 rayOrigin, float3 rayDirection, float3 normalPlane, float d, float3 color )
+HitInfo IntersectPlane2( Ray ray, float3 normalPlane, float d, float3 color )
 {
     HitInfo hit = { FLT_MAX, float3( 0, 0, 0 ), float3( 0, 0, 0 ) };
-    float dist = dot( normalPlane, rayOrigin ) - d;
-    float dotND = dot( rayDirection, normalPlane );
+    float dist = dot( normalPlane, ray.origin) - d;
+    float dotND = dot( ray.direction, normalPlane );
         
     if ( abs( dotND ) > 0.0001 )
     {
@@ -149,28 +155,28 @@ HitInfo IntersectPlane2( float3 rayOrigin, float3 rayDirection, float3 normalPla
     return hit;
 }
 
-HitInfo IntefsectTriangle(float3 rayOrigin, float3 rayDirection, float3 a, float3 b, float3 c, float3 color)
+HitInfo IntefsectTriangle(Ray ray, Triangle tr)
 {
     const HitInfo hitMax = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
     HitInfo hit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
-    const float3 normal = normalize(cross(b - a, c - a));
-    const float d = dot(normal, a);
+    const float3 normal = normalize(cross(tr.b - tr.a, tr.c - tr.a));
+    const float d = dot(normal, tr.a);
     
-    hit = IntersectPlane2(rayOrigin, rayDirection, normal, d, color);
+    hit = IntersectPlane2(ray, normal, d, tr.color);
     
     if (hit.t == FLT_MAX)
         return hitMax;
-    float3 p = rayOrigin + rayDirection * hit.t;
-    if (dot(cross(b - a, p - a), normal) < 0.0f)
+    float3 p = ray.origin + ray.direction* hit.t;
+    if (dot(cross(tr.b - tr.a, p - tr.a), normal) < 0.0f)
         return hitMax;
-    if (dot(cross(c - b, p - b), normal) < 0.0f)
+    if (dot(cross(tr.c - tr.b, p - tr.b), normal) < 0.0f)
         return hitMax;
-    if (dot(cross(a - c, p - c), normal) < 0.0f)
+    if (dot(cross(tr.a - tr.c, p - tr.c), normal) < 0.0f)
         return hitMax;
     return hit;
 }
 
-HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount, uint trianglesCount )
+HitInfo TraceScene( Ray ray, uint primitiveCount, uint trianglesCount )
 {
     HitInfo closestHit = { FLT_MAX, float3( 0,0,0 ), float3( 0,0,0 ) };
 
@@ -182,15 +188,15 @@ HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount, 
         if ( p.type == TYPE_SPHERE )
         {
             // Используем xyz компоненты
-            currentHit = IntersectSphere( rayOrigin, rayDirection, p.position_point.xyz, p.radius );
+            currentHit = IntersectSphere( ray, p.position_point.xyz, p.radius );
             currentHit.color = p.normal_color;
             closestHit.normal = currentHit.normal;
         }
         else if ( p.type == TYPE_PLANE )
         {
-            currentHit = IntersectPlane2( rayOrigin, rayDirection, p.position_point.xyz, p.radius, p.normal_color.xyz );
+            currentHit = IntersectPlane2( ray, p.position_point.xyz, p.radius, p.normal_color.xyz );
             closestHit.normal = p.normal_color.xyz;
-            float3 pos = rayOrigin + rayDirection * currentHit.t;
+            float3 pos = ray.origin + ray.direction * currentHit.t;
             if ( ( int( pos.x + 1000 ) % 2 ) != ( int( pos.z + 1000 ) % 2 ) )
             {
                 currentHit.color = float3( 0, 0, 0 );
@@ -205,11 +211,11 @@ HitInfo TraceScene( float3 rayOrigin, float3 rayDirection, uint primitiveCount, 
     for (uint i = 0; i < trianglesCount; i++)
     {
         Triangle tr = SceneTriangles[i];
-        HitInfo currentHit = IntefsectTriangle(rayOrigin, rayDirection, tr.a, tr.b, tr.c, tr.color);
+        HitInfo currentHit = IntefsectTriangle(ray, tr);
         
         if (currentHit.t > 0.001 && currentHit.t < closestHit.t)
         {
-            closestHit = currentHit;                        
+            closestHit = currentHit;
         }
     }
     return closestHit;
@@ -251,19 +257,15 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
             + ( dispatchThreadID.x + offset_u ) * pixel_delta_u
             + ( dispatchThreadID.y + offset_v ) * pixel_delta_v;
         //Vector3 pixPos = pixel00_loc + Vector3( pixSize / 2.0f + pixel_delta_u * aspectRatio, -pixSize / 2.0f - v, 0.0f );
-
-        // 2. Начало луча (Origin)
-
-        float3 rayOrigin = camera_center;
-
-        // 3. Направление луча (Direction) - Должно быть нормализовано!
-        float3 rayDirection = normalize( pixel_center - rayOrigin );
-
-        HitInfo hit = TraceScene( rayOrigin, rayDirection, primitiveCount, trianglesCount );
+                
+        Ray ray;
+        ray.origin = camera_center;
+        ray.direction = normalize(pixel_center - camera_center);
+        HitInfo hit = TraceScene( ray, primitiveCount, trianglesCount );
 
         float4 color;
 
-        float a = 0.5 * ( rayDirection.y + 1.0 );
+        float a = 0.5 * ( ray.direction.y + 1.0 );
         float3 background = ( 1.0 - a ) * float3( 1.0, 1.0, 1.0 ) + a * float3( 0.5, 0.7, 1.0 ); // От белого до светло-голубого
 
         color = float4( background, 1.0 );
