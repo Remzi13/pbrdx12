@@ -51,7 +51,31 @@ void Scene::parse( const std::string& filename ) {
 
 	ss >> width_ >> height_ >> samples_;
 
-	// 2. „итаем —феры
+	// 2. Enviroment 
+	ss = getNextDataLine( file );
+	float r, g, b;
+	ss >> r >> g >> b;
+	enviroment_ = Vector3( r, g, b );
+
+	// 3. Matterials 
+	ss = getNextDataLine( file );
+	int numMat;
+	ss >> numMat;
+
+	for ( int i = 0; i < numMat; ++i ) {
+		ss = getNextDataLine( file );
+		
+		float r1, g1, b1, r2, g2, b2;
+		int type;
+		ss >> r1 >> g1 >> b1 >> r2 >> g2 >> b2 >> type;
+		Material mat;
+		mat.albedo = Vector3( r1, g1, b1 );
+		mat.emmision = Vector3( r2, g2, b2 );
+		mat.type = type;
+		materials_.push_back( mat );
+	}
+
+	// 4. „итаем —феры
 	ss = getNextDataLine( file );
 	int numSpheres;
 	ss >> numSpheres;
@@ -59,10 +83,10 @@ void Scene::parse( const std::string& filename ) {
 	for ( int i = 0; i < numSpheres; ++i ) {
 		ss = getNextDataLine( file );
 		Sphere sphere;
-		float x, y, z, rad, r, g, b;
-		ss >> x >> y >> z >> rad >> r >> g >> b;
+		float x, y, z, rad, matIndex;
+		ss >> x >> y >> z >> rad >> matIndex;
 		sphere.pos = Vector3( x, y, z );
-		sphere.color = Vector3( r, g, b );
+		sphere.matIndex = matIndex;
 		sphere.radius = rad;
 
 		spheres_.push_back( sphere );
@@ -76,11 +100,11 @@ void Scene::parse( const std::string& filename ) {
 	for ( int i = 0; i < numPlanes; ++i ) {
 		ss = getNextDataLine( file );
 		Plane p;
-		float x, y, z, dist, r, g, b;
-		ss >> x >> y >> z >> dist >> r >> g >> b;
+		float x, y, z, dist, matIndex;
+		ss >> x >> y >> z >> dist >> matIndex;
 		p.normal = Vector3( x, y, z );
 		p.dist = dist;
-		p.color = Vector3( r, g, b );
+		p.matIndex = matIndex;
 		planes_.push_back( p );
 	}
 
@@ -92,14 +116,14 @@ void Scene::parse( const std::string& filename ) {
 	for ( int i = 0; i < numTriangles; ++i ) {
 		ss = getNextDataLine( file );
 
-		float x1, y1, z1, x2, y2, z2, x3, y3, z3, r, g, b;
-		ss >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3  >> r >> g >> b;
+		float x1, y1, z1, x2, y2, z2, x3, y3, z3, matIndex;
+		ss >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3  >> matIndex;
 
 		Triangle t;
 		t.a = Vector3( x1, y1, z1  );
 		t.b = Vector3( x2, y2, z2  );
 		t.c = Vector3( x3, y3, z3  );
-		t.color = Vector3( r, g, b );
+		t.matIndex = matIndex;
 		triangles_.push_back( t );
 	}
 }

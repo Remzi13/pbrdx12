@@ -7,6 +7,7 @@
 #include <math.h>
 #include <sstream>
 #include <chrono>
+#include <random>
 
 #include "../src/vector.h"
 #include "../src/scene.h"
@@ -119,20 +120,151 @@ float intersectSphere(const Ray& ray, const Vector3& center, float radius, float
 	return tMax;
 }
 
-Vector3 getUniformSampleOffset( int index, int side_count )
+//Vector3 getUniformSampleOffset( int index, int side_count )
+//{
+//	const float haflDist = 0.5 / side_count;
+//	const float dist = 1.0 / side_count;
+//	const float x = index % side_count;
+//	const float y = std::floor( index / side_count );
+//	return Vector3( haflDist + x * dist, haflDist + y * dist, 0.0 );
+//}
+
+float randomFloat()
 {
-	const float haflDist = 0.5 / side_count;
-	const float dist = 1.0 / side_count;
-	const float x = index % side_count;
-	const float y = std::floor( index / side_count );
-	return Vector3( haflDist + x * dist, haflDist + y * dist, 0.0 );
+	static std::uniform_real_distribution<float> distribution(0.0, 1.0);
+	static std::mt19937 generator;
+	return distribution(generator);
 }
 
+Vector3 getUniformSampleOffset(int index, int side_count)
+{	
+	const float x_idx = (float)(index % side_count);
+	const float y_idx = (float)std::floor(index / side_count);
+		
+	const float dist = 1.0f / side_count;
+		
+	const float jitterX = randomFloat();
+	const float jitterY = randomFloat();
+		
+	const float u = (x_idx + jitterX) * dist;
+	const float v = (y_idx + jitterY) * dist;
+	
+	return Vector3(u, v, 0.0f);
+}
+
+
+
+float randFloat( float min, float max )
+{
+	return min + ( max - min ) * ( randomFloat() );
+}
+
+Vector3 randVector( float min, float max )
+{
+	return Vector3( randFloat( min, max ), randFloat( min, max ), randFloat( min, max ) );
+}
+
+Vector3 randUnitVector()
+{
+	while ( true )
+	{
+		Vector3 p = randVector( -1, 1 );
+		float l = p.length_squared();
+		if ( 1e-160 < l && l <= 1 )
+			return p / std::sqrt( l );
+	}
+}
+
+const float PI = 3.14;
+Vector3 randomUniformVectorHemispher()
+{
+	float phi = randomFloat() * 2.0 * PI;
+	float cosTheta = randomFloat();
+	float sinTheta = std::sqrt( 1 - cosTheta * cosTheta );
+	float x = std::cos( phi ) * sinTheta;
+	float y = cosTheta;
+	float z = std::sin( phi ) * sinTheta;
+	return Vector3( x, y, z );
+}
+
+Vector3 randOnHemispher(const Vector3& normal)
+{
+	Vector3 onSphere = randUnitVector();
+	if (dot(onSphere, normal) > 0.0)
+		return onSphere;
+	else
+		return -onSphere;
+}
+
+
+Vector3 trace( const Ray& ray, const Scene& scene, int depth)
+{
+	if ( depth >= 4 )
+		return scene.enviroment();
+
+	const float tMin = 0.001f;
+	float tMax = 10000;
+	Vector3 hitNormal;
+	float t = 0;
+	int matIndex = 0;
+	for ( const auto& sp : scene.spheres() )
+	{
+		t = intersectSphere( ray, sp.pos, sp.radius, tMin, tMax );
+		if ( t < tMax )
+		{
+			Vector3 pos = ray.origin + ray.direction * t;
+			Vector3 v = pos - sp.pos;
+			float l = v.length();
+			hitNormal = unit_vector( pos - sp.pos );
+			tMax = t;
+			matIndex = sp.matIndex;
+		}
+	}
+
+	for ( const auto& p : scene.planes() )
+	{
+		t = intersectPlane2( ray, p.normal, p.dist, tMin, tMax );
+		if ( t < tMax )
+		{
+			hitNormal = p.normal;
+			tMax = t;
+			matIndex = p.matIndex;
+		}
+	}
+	for ( const auto& tr : scene.triangles() )
+	{
+		t = intersectTriangle( ray, tr.a, tr.b, tr.c, tMin, tMax );
+		if ( t < tMax )
+		{
+			hitNormal = unit_vector( cross( tr.b - tr.a, tr.c - tr.a ) );
+			tMax = t;
+			matIndex = tr.matIndex;
+		}
+	}
+	if ( t == 10000 )
+		return scene.enviroment();
+	
+
+	if ( dot( hitNormal, ray.direction ) > 0.0 )
+		hitNormal = -hitNormal;
+
+	//Vector3 newDir = randomUniformVectorHemispher();
+	const Vector3 newDir = randOnHemispher( hitNormal );
+	const Vector3 newOrig = ray.origin + ray.direction * t;	
+	const Ray newRay( {newOrig, newDir } );
+
+	const Material m = scene.material( matIndex );
+	const auto tr = trace( newRay, scene, depth + 1 );
+	const auto w = dot( newDir, hitNormal ) * 2 * PI;
+	const Vector3 color = m.emmision + tr * m.albedo * w;
+	return color;
+}
 
 int main()
 {
 	Scene scene;
-	scene.load( "../scenes/02-scene-hard-v2.txt" );
+	//scene.load( "../scenes/02-scene-hard-v2.txt" );
+	scene.load( "../scenes/03-scene-hard.txt" );
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
@@ -154,7 +286,7 @@ int main()
 			Vector3 color( 0, 0, 0);
 			const float u = float(x) / width;
 			const float v = float(y) / height;
-			const float tMin = 0.001f;
+			
 
 			for ( int s = 0; s < SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT; ++s )
 			{
@@ -164,56 +296,8 @@ int main()
 				const Vector3 pixPos = leftTop + Vector3( pixSize * offset.x() + u * aspectRatio, -pixSize * offset.y() - v, 0.0f );
 
 				const Vector3 dir = unit_vector( pixPos - cameraOrigin );
-
-				Vector3 c = Vector3( dir.x() * 0.5 + 0.5, dir.y() * 0.5 + 0.5, dir.z() * 0.5 + 0.5 );
-				
-				float tMax = 10000;
 				const Ray ray( { cameraOrigin, dir } );
-
-				Vector3 hitNormal;
-				float t = 0;
-				for ( const auto& sp : scene.spheres() )
-				{
-					t = intersectSphere( ray, sp.pos, sp.radius, tMin, tMax );
-					if ( t < tMax )
-					{
-						c = sp.color;
-						Vector3 pos = ray.origin + ray.direction * t;
-						Vector3 v = pos - sp.pos;
-						float l = v.length();
-						hitNormal = unit_vector( pos - sp.pos );
-						if ( dot( hitNormal, ray.direction ) > 0.0 )
-							hitNormal = -hitNormal;
-						tMax = t;
-					}
-				}
-				
-				for ( const auto& p : scene.planes() )
-				{
-					t = intersectPlane2( ray, p.normal, p.dist, tMin, tMax );
-					if ( t < tMax )
-					{
-						c = p.color;
-						hitNormal = p.normal;
-						if ( dot( hitNormal, ray.direction ) > 0.0 )
-							hitNormal = -hitNormal;
-						tMax = t;
-					}
-				}
-				for ( const auto& tr : scene.triangles() )
-				{
-					t = intersectTriangle( ray, tr.a, tr.b, tr.c, tMin, tMax );
-					if ( t < tMax )
-					{
-						c = tr.color;
-						hitNormal = unit_vector( cross( tr.b - tr.a, tr.c - tr.a ) );
-						if ( dot( hitNormal, ray.direction ) > 0.0 )
-							hitNormal = -hitNormal;
-						tMax = t;
-					}
-				}
-				color += hitNormal * 0.5 + Vector3(0.5, 0.5, 0.5);
-				//color += c;
+				color += trace( ray, scene, 0 );
 			}
 
 			data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);

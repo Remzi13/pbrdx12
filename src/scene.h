@@ -7,15 +7,15 @@
 struct Sphere
 {
 	Vector3 pos;
-	Vector3 color;
 	float radius;
+	int matIndex;
 };
 
 struct Plane
 {
-	Vector3 normal;
-	Vector3 color;
+	Vector3 normal;	
 	float dist;
+	int matIndex;
 };
 
 struct Triangle
@@ -23,7 +23,14 @@ struct Triangle
 	Vector3 a;
 	Vector3 b;
 	Vector3 c;
-	Vector3 color;
+	int matIndex;
+};
+
+struct Material
+{
+	Vector3 albedo;
+	Vector3 emmision;
+	int type;
 };
 
 class Scene
@@ -38,6 +45,8 @@ public:
 	int samples() const { return samples_; }
 	int width() const { return width_; }
 	int height() const { return height_; }
+	Vector3 enviroment() const { return enviroment_; }
+	Material material( int index ) const { return materials_[index]; }
 
 	const std::vector<Sphere>& spheres() const { return spheres_; }
 	const std::vector<Plane>& planes() const { return planes_; }
@@ -53,6 +62,8 @@ private:
 	int samples_;
 	int width_;
 	int height_;
+	Vector3 enviroment_;
+	std::vector<Material> materials_;
 	std::vector<Sphere> spheres_;
 	std::vector<Plane> planes_;
 	std::vector<Triangle> triangles_;
