@@ -86,7 +86,7 @@ void Scene::parse( const std::string& filename ) {
 		float x, y, z, rad, matIndex;
 		ss >> x >> y >> z >> rad >> matIndex;
 		sphere.pos = Vector3( x, y, z );
-		sphere.matIndex = matIndex;
+		sphere.matIndex = (int)matIndex;
 		sphere.radius = rad;
 
 		spheres_.push_back( sphere );
@@ -104,7 +104,7 @@ void Scene::parse( const std::string& filename ) {
 		ss >> x >> y >> z >> dist >> matIndex;
 		p.normal = Vector3( x, y, z );
 		p.dist = dist;
-		p.matIndex = matIndex;
+		p.matIndex = (int)matIndex;
 		planes_.push_back( p );
 	}
 
@@ -123,7 +123,7 @@ void Scene::parse( const std::string& filename ) {
 		t.a = Vector3( x1, y1, z1  );
 		t.b = Vector3( x2, y2, z2  );
 		t.c = Vector3( x3, y3, z3  );
-		t.matIndex = matIndex;
+		t.matIndex = (int)matIndex;
 		triangles_.push_back( t );
 	}
 }

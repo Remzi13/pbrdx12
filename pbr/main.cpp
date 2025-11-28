@@ -23,6 +23,28 @@ float srgb( float x )
 	return std::pow( x, 1 / 2.2 );
 }
 
+Vector3 tonemapping( const Vector3& color )
+{
+	return Vector3( std::min( 1.0f, color.x() ), std::min( 1.0f, color.y() ), std::min( 1.0f, color.z() ) );
+}
+
+Vector3 tonemappingUncharted( const Vector3& color )
+{
+	const Vector3 A = Vector3( 0.15f, 0.15f, 0.15f );
+	const Vector3 B = Vector3( 0.50f, 0.50f, 0.50f );
+	const Vector3 C = Vector3( 0.10f, 0.10f, 0.10f );
+	const Vector3 D = Vector3( 0.20f, 0.20f, 0.20f );
+	const Vector3 E = Vector3( 0.02f, 0.02f, 0.02f );
+	const Vector3 F = Vector3( 0.30f, 0.30f, 0.30f );	
+	const Vector3 wPoint = Vector3(11.20f, 11.30f, 11.20f);
+
+	auto applay = [&](const Vector3& c) {
+		return ((c * (A * c + C * B) + D * E) / (c * (A * c + B) + D * F)) - E / F;
+		};	
+	
+	return applay(color) * (Vector3(1.0, 1.0f, 1.0f) / applay(wPoint));
+}
+
 void saveImageToFile( std::uint16_t width, std::uint16_t height, const std::vector<Vector3>& data )
 {
 	std::ofstream outfile( "output.ppm", std::ios::out | std::ios::binary );
@@ -35,9 +57,10 @@ void saveImageToFile( std::uint16_t width, std::uint16_t height, const std::vect
 		{
 			for ( int x = 0; x < width; ++x )
 			{
-				int r = srgb(data[y * width + x].x()) * 255; // R
-				int g = srgb(data[y * width + x].y()) * 255; // G
-				int b = srgb(data[y * width + x].z()) * 255; // B
+				Vector3 color = tonemappingUncharted( data[y * width + x] );
+				int r = (int)std::clamp( srgb(color.x()) * 255, 0.0f, 255.0f); // R
+				int g = (int)std::clamp( srgb(color.y()) * 255, 0.0f, 255.0f); // G
+				int b = (int)std::clamp( srgb(color.z()) * 255, 0.0f, 255.0f); // B
 
 				outfile << r << " " << g << " " << b << " ";
 			}
@@ -178,8 +201,8 @@ Vector3 randUnitVector()
 const float PI = 3.14;
 Vector3 randomUniformVectorHemispher()
 {
-	float phi = randomFloat() * 2.0 * PI;
-	float cosTheta = randomFloat();
+	float phi = randFloat(0, 1) * 2.0 * PI;
+	float cosTheta = randFloat(0, 1) * 2.0 - 1.0;
 	float sinTheta = std::sqrt( 1 - cosTheta * cosTheta );
 	float x = std::cos( phi ) * sinTheta;
 	float y = cosTheta;
@@ -244,19 +267,23 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth)
 	if ( t == 10000 )
 		return scene.enviroment();
 	
-
 	if ( dot( hitNormal, ray.direction ) > 0.0 )
 		hitNormal = -hitNormal;
 
-	//Vector3 newDir = randomUniformVectorHemispher();
-	const Vector3 newDir = randOnHemispher( hitNormal );
-	const Vector3 newOrig = ray.origin + ray.direction * t;	
+	Vector3 newDir = randomUniformVectorHemispher();
+	//const Vector3 newDir = randOnHemispher( hitNormal );
+	auto cosTheta = dot( newDir, hitNormal );
+	if ( cosTheta < 0.0 )
+		newDir *= -1;
+	const Vector3 newOrig = ray.origin + ray.direction * t + newDir * 1e-4;	
 	const Ray newRay( {newOrig, newDir } );
 
 	const Material m = scene.material( matIndex );
 	const auto tr = trace( newRay, scene, depth + 1 );
-	const auto w = dot( newDir, hitNormal ) * 2 * PI;
-	const Vector3 color = m.emmision + tr * m.albedo * w;
+	const float brdf = 1.0 / PI;
+	const float pdf = 1.0 / ( 2.0 * PI );
+	Vector3 color = tr * brdf * std::abs( cosTheta ) / pdf * m.albedo + m.emmision;
+
 	return color;
 }
 
@@ -264,7 +291,9 @@ int main()
 {
 	Scene scene;
 	//scene.load( "../scenes/02-scene-hard-v2.txt" );
-	scene.load( "../scenes/03-scene-hard.txt" );
+	//scene.load( "../scenes/03-scene-hard.txt" );
+	//scene.load( "../scenes/03-scene-easy.txt" );
+	scene.load( "../scenes/03-scene-medium.txt" );
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();

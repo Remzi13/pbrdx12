@@ -1,0 +1,29 @@
+# Version
+3
+
+# Width, height, number of samples per side
+320 240 4
+
+# Environment (r, g, b)
+1.0 1.0 1.0
+
+# Number of materials
+1
+# Albedo (r, g, b), emission (r, g, b), kind (0 - diffuse, 1 - mirror)
+0.6 0.9 0.3 0.0 0.0 0.0 0
+
+# Number of spheres
+1
+# Position (x, y, z), radius, material index
+0.0 0.0 4.0 1.0 0
+
+# Number of planes
+1
+# Normal (x, y, z), distance, material index
+0.0 1.0 0.0 -1.0 0
+
+# Number of triangles
+0
+# A (x, y, z), B (x, y, z), C(x, y, z), material index
+
+

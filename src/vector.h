@@ -73,6 +73,10 @@ inline Vector3 operator*( const Vector3& u, const Vector3& v ) {
 	return Vector3( u.d[0] * v.d[0], u.d[1] * v.d[1], u.d[2] * v.d[2] );
 }
 
+inline Vector3 operator/(const Vector3& u, const Vector3& v) {
+	return Vector3(u.d[0] / v.d[0], u.d[1] / v.d[1], u.d[2] / v.d[2]);
+}
+
 inline Vector3 operator*( float t, const Vector3& v ) {
 	return Vector3( t * v.d[0], t * v.d[1], t * v.d[2] );
 }
