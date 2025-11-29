@@ -22,11 +22,11 @@ using Microsoft::WRL::ComPtr;
 struct Primitive
 {
 	uint32_t type;
+	uint32_t matIndex;
 	float radius;
-	float _pad0[2];
+	float _pad0[1];
 
 	Vector4 position;
-	Vector4 color;
 };
 
 struct RTrinangle
@@ -38,8 +38,18 @@ struct RTrinangle
 	Vector3 c;
 	float _padC;
 
-	Vector3 color;
-	float _padColor;
+	uint32_t matIndex;
+	float _pad[3];
+};
+
+struct RTMaterial
+{
+	Vector3 albedo;
+	float _pada;
+	Vector3 emmision;
+	float _pade;
+	uint32_t type;
+	float _pad[3];
 };
 
 
@@ -110,5 +120,6 @@ private:
 
 	StructuredBuffer<Primitive> scenePrimitives_;
 	StructuredBuffer<RTrinangle> sceneTriangles_;
+	StructuredBuffer<RTMaterial> sceneMaterials_;
 };
 

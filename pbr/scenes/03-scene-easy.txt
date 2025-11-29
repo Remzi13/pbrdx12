@@ -2,7 +2,7 @@
 3
 
 # Width, height, number of samples per side
-320 240 4
+320 240 8
 
 # Environment (r, g, b)
 1.0 1.0 1.0
@@ -23,7 +23,7 @@
 0.0 1.0 0.0 -1.0 0
 
 # Number of triangles
-0
+1
 # A (x, y, z), B (x, y, z), C(x, y, z), material index
-
+-2.0 -2.0 4.0 -2.0 -2.0 8.0 -2.0 2.0 8.0 0
 

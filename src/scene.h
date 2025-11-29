@@ -54,13 +54,14 @@ public:
 	int width() const { return width_; }
 	int height() const { return height_; }
 	Vector3 enviroment() const { return enviroment_; }
-	Material material( int index ) const { return materials_[index]; }
+	
 
 	const Camera& camera() const { return camera_; }
 
 	const std::vector<Sphere>& spheres() const { return spheres_; }
 	const std::vector<Plane>& planes() const { return planes_; }
 	const std::vector<Triangle>& triangles() const { return triangles_; }
+	const std::vector<Material>& materials() const { return materials_; }
 
 	size_t count() const { return spheres_.size() + planes_.size(); }
 

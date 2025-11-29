@@ -21,44 +21,38 @@ bool App::init( HWND hwnd )
 	hwnd_ = hwnd;
 	camera_.setPos( { 0, 0, 0 } );
 	g_lastTime = std::chrono::high_resolution_clock::now();
-	scene_.load( "../pbr/scenes/02-scene-hard-v2.txt" );
+	//scene_.load( "../pbr/scenes/03-scene-easy.txt" );
+	scene_.load("../pbr/scenes/03-scene-medium.txt");
 	return render_.init( hwnd, scene_);
 }
 
 void App::update()
 {
 	auto currentTime = std::chrono::high_resolution_clock::now();
-	// Считаем разницу между кадрами в секундах
-	float deltaTime = std::chrono::duration<float>( currentTime - g_lastTime ).count();
+	float deltaTime = std::chrono::duration<float>( currentTime - g_lastTime ).count();	
 	g_lastTime = currentTime;
 
-	// Сохраняем frametime в миллисекундах
 	g_frameTime = deltaTime * 1000.0f;
 
-	// Накапливаем время и кадры для подсчета FPS
 	g_fpsTimer += deltaTime;
 	g_frameCount++;
 
-	// Обновляем заголовок окна один раз в секунду
 	if ( g_fpsTimer >= 1.0f )
 	{
-		// Сохраняем FPS
 		g_fps = g_frameCount;
 
-		// Сбрасываем счетчики
 		g_frameCount = 0;
-		g_fpsTimer -= 1.0f; // Вычитаем 1.0, а не обнуляем, для точности
+		g_fpsTimer -= 1.0f;
 
-		// Форматируем строку заголовка
 		wchar_t title[128];
 		swprintf_s( title, 128, L"PBRDX12 - FPS: [ %d | %.2f ms]", g_fps, g_frameTime );
 
-		// Устанавливаем заголовок окна
 		SetWindowText( hwnd_, title );
 	}
 
 	inputUpdate();
 	render_.update( camera_, scene_, isDirty_, deltaTime );
+	isDirty_ = false;
 	render_.draw();
 }
 
@@ -170,7 +164,7 @@ void App::handleKeyEvent( const InputEvent& event )
 			newSphere.radius = 0.3f;
 			// Случайная позиция
 			newSphere.position = { (rand() % 10) - 5.0f, ( rand() % 10 ) - 5.0f, (rand() % 5) + 1.0f, 0.0f };
-			newSphere.color = { 1.0f, 0.1f, 0.1f, 1.0f }; // Красный
+			newSphere.matIndex = 0;
 
 			auto s = scene_.samples();
 			scene_.setSamples( s + 1 );

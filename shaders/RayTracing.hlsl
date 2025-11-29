@@ -3,19 +3,15 @@
 #define TYPE_SPHERE 0
 #define TYPE_PLANE 1
 
-// Выходная текстура (RW - Read/Write)
 RWTexture2D<float4> OutputTexture : register(u0);
 
-// Структура для результата пересечения
 struct HitInfo
 {
-    float t; // Расстояние до точки пересечения
-    float3 normal; // Нормаль в точке пересечения
-    float3 color; // Цвет поверхности
+    float t;
+    float3 normal;
+    float3 color;
 };
 
-
-// Структура для Буфера Констант (должна совпадать с C++ структурой)
 cbuffer SceneConstants : register(b0)
 {
     float3 camera_center;
@@ -34,15 +30,19 @@ cbuffer SceneConstants : register(b0)
     uint trianglesCount;
     uint sampleCount;
     float _pad5;
+    
+    float3 enviroment;
+    float frameTime;    
 };
 
 struct Primitive
 {
     uint type;
+    uint matIndex;
     float radius;
-    float _pad0[2];
+    float _pad0;
+    
     float4 position_point;
-    float4 normal_color;
 };
 
 struct Triangle
@@ -53,8 +53,18 @@ struct Triangle
     float _padB;
     float3 c;
     float _padC;
-    float3 color;
-    float _padColort;
+    uint matIndex;
+    float3 _pad;
+};
+
+struct Material
+{
+    float3 albedo;
+    float _pada;
+    float3 emmision;
+    float _pade;
+    uint type;
+    float _pad[3];
 };
 
 struct Ray
@@ -63,12 +73,32 @@ struct Ray
     float3 direction;
 };
 
-// Structured Buffer (Регистр t0: Shader Resource View)
+static const float PI = 3.14159265359;
+
 StructuredBuffer<Primitive> ScenePrimitives : register( t0 );
-StructuredBuffer<Triangle> SceneTriangles : register( t1 );
-//--------------------------------------------------------------------------------------
-// Вспомогательные Функции
-//--------------------------------------------------------------------------------------
+StructuredBuffer<Triangle> SceneTriangles   : register( t1 );
+StructuredBuffer<Material> SceneMaterials   : register( t2 );
+
+
+float RandomFloat(float2 p, float seed)
+{
+    float2 temp = p + seed;
+    float n = dot(temp, float2(12.9898, 78.233));
+    return frac(sin(n) * 43758.5453123);
+}
+
+float3 randomUniformVectorHemispher(float2 screanPos)
+{
+    float randOne = RandomFloat(screanPos, frameTime);
+    float randTwo = RandomFloat(screanPos + 0.1 , frameTime);
+    float phi = randOne * 2.0 * PI;
+    float cosTheta = randTwo * 2.0 - 1.0;
+    float sinTheta = sqrt(1 - cosTheta * cosTheta);
+    float x = cos(phi) * sinTheta;
+    float y = cosTheta;
+    float z = sin(phi) * sinTheta;
+    return float3(x, y, z);
+}
 
 // Функция для трассировки луча со сферой (Оптимизирована: a = 1.0)
 HitInfo IntersectSphere(Ray ray, float3 sphereCenter, float sphereRadius)
@@ -155,14 +185,14 @@ HitInfo IntersectPlane2( Ray ray, float3 normalPlane, float d, float3 color )
     return hit;
 }
 
-HitInfo IntefsectTriangle(Ray ray, Triangle tr)
+HitInfo IntefsectTriangle(Ray ray, Triangle tr, float3 color)
 {
     const HitInfo hitMax = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
     HitInfo hit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
     const float3 normal = normalize(cross(tr.b - tr.a, tr.c - tr.a));
     const float d = dot(normal, tr.a);
     
-    hit = IntersectPlane2(ray, normal, d, tr.color);
+    hit = IntersectPlane2(ray, normal, d, color);
     
     if (hit.t == FLT_MAX)
         return hitMax;
@@ -176,49 +206,83 @@ HitInfo IntefsectTriangle(Ray ray, Triangle tr)
     return hit;
 }
 
-HitInfo TraceScene( Ray ray, uint primitiveCount, uint trianglesCount )
+float3 TraceScene( Ray ray, uint primitiveCount, uint trianglesCount, float2 screenPos, float depth )
 {
-    HitInfo closestHit = { FLT_MAX, float3( 0,0,0 ), float3( 0,0,0 ) };
-
-    for ( uint i = 0; i < primitiveCount; i++ )
+    float3 throughput = float3(1, 1, 1);
+    float3 radiance = float3(0, 0, 0);
+    
+    for (uint d = 0; d < depth; ++d)
     {
-        Primitive p = ScenePrimitives[i];
-        HitInfo currentHit;
-
-        if ( p.type == TYPE_SPHERE )
+        int matIndex = -1;
+        HitInfo closestHit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
+        for (uint i = 0; i < primitiveCount; i++)
         {
-            // Используем xyz компоненты
-            currentHit = IntersectSphere( ray, p.position_point.xyz, p.radius );
-            currentHit.color = p.normal_color;
-            closestHit.normal = currentHit.normal;
-        }
-        else if ( p.type == TYPE_PLANE )
-        {
-            currentHit = IntersectPlane2( ray, p.position_point.xyz, p.radius, p.normal_color.xyz );
-            closestHit.normal = p.normal_color.xyz;
-            float3 pos = ray.origin + ray.direction * currentHit.t;
-            if ( ( int( pos.x + 1000 ) % 2 ) != ( int( pos.z + 1000 ) % 2 ) )
+            Primitive p = ScenePrimitives[i];
+            HitInfo currentHit;
+            float3 color = SceneMaterials[p.matIndex].albedo;
+            if (p.type == TYPE_SPHERE)
             {
-                currentHit.color = float3( 0, 0, 0 );
+                currentHit = IntersectSphere(ray, p.position_point.xyz, p.radius);
+                currentHit.color = color;
+            }
+            else if (p.type == TYPE_PLANE)
+            {
+                currentHit = IntersectPlane2(ray, p.position_point.xyz, p.radius, color);
+            }
+
+            if (currentHit.t > 0.001 && currentHit.t < closestHit.t)
+            {
+                closestHit = currentHit;
+                matIndex = p.matIndex;
             }
         }
-
-        if ( currentHit.t > 0.001 && currentHit.t < closestHit.t )
+        for (uint i = 0; i < trianglesCount; i++)
         {
-            closestHit = currentHit;
-        }
-    }
-    for (uint i = 0; i < trianglesCount; i++)
-    {
-        Triangle tr = SceneTriangles[i];
-        HitInfo currentHit = IntefsectTriangle(ray, tr);
+            Triangle tr = SceneTriangles[i];
+            float3 color = SceneMaterials[tr.matIndex].albedo;
+            HitInfo currentHit = IntefsectTriangle(ray, tr, color);
         
-        if (currentHit.t > 0.001 && currentHit.t < closestHit.t)
-        {
-            closestHit = currentHit;
+            if (currentHit.t > 0.001 && currentHit.t < closestHit.t)
+            {
+                closestHit = currentHit;
+                matIndex = tr.matIndex;
+            }
         }
-    }
-    return closestHit;
+    
+        if (closestHit.t == FLT_MAX || matIndex == -1)
+        {
+            radiance += throughput * enviroment;
+            break;
+        }
+    
+        if (dot(closestHit.normal, ray.direction) > 0.0)
+            closestHit.normal = -closestHit.normal;
+    
+        float3 newDir = randomUniformVectorHemispher(screenPos);
+        float cosTheta = dot(newDir, closestHit.normal);
+        if (cosTheta < 0.0)
+            newDir = -newDir;
+        
+        cosTheta = dot(newDir, closestHit.normal);
+         // BRDF
+        float brdf = 1.0 / PI;
+        float pdf = 1.0 / (2.0 * PI);
+
+        const Material m = SceneMaterials[matIndex];
+        // Add emission
+        radiance += throughput * m.emmision;
+
+        // Update throughput
+        throughput *= m.albedo * (brdf * cosTheta / pdf);
+
+        // Spawn new ray        
+        const float3 newOrig = ray.origin + ray.direction * closestHit.t + newDir * 1e-4;
+
+        ray.origin = newOrig;
+        ray.direction = newDir;        
+    }               
+    
+    return radiance;
 }
 
 float3 getUniformSampleOffset( int index, int side_count )
@@ -261,20 +325,9 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
         Ray ray;
         ray.origin = camera_center;
         ray.direction = normalize(pixel_center - camera_center);
-        HitInfo hit = TraceScene( ray, primitiveCount, trianglesCount );
+        
+        accumulatedColor += TraceScene(ray, primitiveCount, trianglesCount, pixel_center.xy, 4);
 
-        float4 color;
-
-        float a = 0.5 * ( ray.direction.y + 1.0 );
-        float3 background = ( 1.0 - a ) * float3( 1.0, 1.0, 1.0 ) + a * float3( 0.5, 0.7, 1.0 ); // От белого до светло-голубого
-
-        color = float4( background, 1.0 );
-        // --- 3. Вычисление Цвета и Визуализация Нормалей ---
-        if ( hit.t > 0.0 && hit.t < FLT_MAX )
-        {
-            color = float4( hit.color, 1.0 );
-        }
-        accumulatedColor += color;
     }
 
     OutputTexture[dispatchThreadID.xy] = float4(accumulatedColor / float( sampleCount * sampleCount ), 0.0);

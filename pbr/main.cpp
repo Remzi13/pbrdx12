@@ -238,8 +238,6 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 		if ( t < tMax )
 		{
 			Vector3 pos = ray.origin + ray.direction * t;
-			Vector3 v = pos - sp.pos;
-			float l = v.length();
 			hitNormal = unit_vector( pos - sp.pos );
 			tMax = t;
 			matIndex = sp.matIndex;
@@ -323,6 +321,93 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 	return color;
 }
 
+Vector3 trace_iterative(Ray ray, const Scene& scene, int maxDepth)
+{
+	Vector3 throughput = Vector3(1.0, 1.0, 1.0);
+	Vector3 radiance = Vector3(0.0, 0.0, 0.0);
+
+	const float tMin = 0.001f;
+
+	for (int depth = 0; depth < maxDepth; ++depth)
+	{
+		float tMax = 10000.0f;
+		float t; 
+		Vector3 hitNormal;
+		int matIndex = -1; 
+
+		
+		for (const auto& sp : scene.spheres())
+		{
+			t = intersectSphere(ray, sp.pos, sp.radius, tMin, tMax);
+			if (t < tMax)
+			{
+				Vector3 pos = ray.origin + ray.direction * t;
+				hitNormal = unit_vector(pos - sp.pos);
+				tMax = t;
+				matIndex = sp.matIndex;
+			}
+		}
+
+		for (const auto& p : scene.planes())
+		{
+			t = intersectPlane2(ray, p.normal, p.dist, tMin, tMax);
+			if (t < tMax)
+			{
+				hitNormal = p.normal;
+				tMax = t;
+				matIndex = p.matIndex;
+			}
+		}
+
+		for (const auto& tr : scene.triangles())
+		{
+			t = intersectTriangle(ray, tr.a, tr.b, tr.c, tMin, tMax);
+			if (t < tMax)
+			{
+				hitNormal = unit_vector(cross(tr.b - tr.a, tr.c - tr.a));
+				tMax = t;
+				matIndex = tr.matIndex;
+			}
+		}
+
+		if (matIndex == -1 || tMax == 10000.0f) // matIndex == -1 - более явная проверка на промах
+		{
+			radiance += throughput * scene.enviroment();
+			break;
+		}		
+		
+		if (dot(hitNormal, ray.direction) > 0.0)
+			hitNormal = -hitNormal;
+
+		
+		Vector3 newDir = randomUniformVectorHemispher();
+
+		auto cosTheta = dot(newDir, hitNormal);
+		if (cosTheta < 0.0)
+			newDir *= -1;
+
+		cosTheta = dot(newDir, hitNormal);
+
+		const Material m = scene.materials()[matIndex];
+
+		
+		radiance += throughput * m.emmision;
+
+		const float brdf = 1.0 / PI;
+		const float pdf = 1.0 / (2.0 * PI);
+				
+		throughput = throughput * m.albedo * (brdf * cosTheta / pdf);
+
+		
+		const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4;
+
+		ray.origin = newOrig;
+		ray.direction = newDir;
+	}
+
+	return radiance;
+}
+
 int main()
 {
 	Scene scene;
@@ -370,7 +455,8 @@ int main()
 
 				const Vector3 dir = unit_vector( pixPos - camera.pos );
 				const Ray ray( { camera.pos, dir } );
-				color += trace( ray, scene, 0 );
+				color += trace_iterative( ray, scene, 4 );
+				//color += trace(ray, scene, 0);
 			}
 
 			data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);
