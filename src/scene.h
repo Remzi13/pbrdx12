@@ -55,6 +55,7 @@ public:
 	int height() const { return height_; }
 	Vector3 enviroment() const { return enviroment_; }
 	
+	void addSphere(const Sphere& sp) { spheres_.push_back(sp); }
 
 	const Camera& camera() const { return camera_; }
 

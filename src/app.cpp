@@ -21,8 +21,8 @@ bool App::init( HWND hwnd )
 	hwnd_ = hwnd;
 	camera_.setPos( { 0, 0, 0 } );
 	g_lastTime = std::chrono::high_resolution_clock::now();
-	//scene_.load( "../pbr/scenes/03-scene-easy.txt" );
-	scene_.load("../pbr/scenes/03-scene-medium.txt");
+	scene_.load( "../pbr/scenes/03-scene-easy.txt" );
+	//scene_.load("../pbr/scenes/03-scene-medium.txt");
 	return render_.init( hwnd, scene_);
 }
 
@@ -159,16 +159,15 @@ void App::handleKeyEvent( const InputEvent& event )
 	case 'A':
 		if (pressed)
 		{
-			Primitive newSphere;
-			newSphere.type = 0; // TYPE_SPHERE
-			newSphere.radius = 0.3f;
+			Sphere sphere;
+			sphere.radius = 0.3f;
 			// Случайная позиция
-			newSphere.position = { (rand() % 10) - 5.0f, ( rand() % 10 ) - 5.0f, (rand() % 5) + 1.0f, 0.0f };
-			newSphere.matIndex = 0;
+			sphere.pos = Vector3({ (rand() % 10) - 5.0f, ( rand() % 10 ) - 5.0f, (rand() % 5) + 1.0f});
+			sphere.matIndex = 0;
 
-			auto s = scene_.samples();
-			scene_.setSamples( s + 1 );
-			//scene_.push_back(newSphere);
+			//auto s = scene_.samples();
+			//scene_.setSamples( s + 1 );
+			scene_.addSphere(sphere);
 			isDirty_ = true;
 		}
 		break;

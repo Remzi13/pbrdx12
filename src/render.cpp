@@ -20,12 +20,12 @@
 #include <string>
 #include <fstream>
 #include <cmath>
-#include <random>
+
 
 #include <stdint.h>
 
+#include "utils.h"
 #include "vector.h"
-
 #include "buffers.h"
 
 using Microsoft::WRL::ComPtr;
@@ -134,12 +134,14 @@ struct SceneParameters
 	float  frameTime;
 };
 
-SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const Vector3& cameraCenter)
+ConstantBuffer<SceneParameters> g_buffer;
+
+void updateSceneParam(const Scene& scene, const Vector3& cameraCenter, float dt)
 {
 	const float FOCAL_LENGTH = 1.0f;     // Соответствует leftTop.z
 	const float VIEWPORT_HEIGHT = 1.0f;  // Изменение: высота от -0.5 до 0.5 (Всего 1.0)
 
-	const float aspectRatio = (float)width / (float)height;
+	const float aspectRatio = (float)scene.width() / (float)scene.height();
 	const float viewport_width = VIEWPORT_HEIGHT * aspectRatio;
 
 	// 2. Векторы U и V
@@ -161,8 +163,8 @@ SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const 
 
 	// 5. Центр Пикселя (pixel00_loc)
 	// Это центр первого пикселя.
-	const Vector3 pixel_delta_u = viewport_u / (float)width;
-	const Vector3 pixel_delta_v = viewport_v / (float)height;
+	const Vector3 pixel_delta_u = viewport_u / (float)scene.width();
+	const Vector3 pixel_delta_v = viewport_v / (float)scene.height();
 	const Vector3 pixel00_loc = viewport_upper_left + 0.5f * (pixel_delta_u + pixel_delta_v);
 
 	SceneParameters params;
@@ -171,10 +173,17 @@ SceneParameters calcSceneParam(std::uint16_t width, std::uint16_t height, const 
 	params.pixel_delta_v = pixel_delta_v;
 	params.pixel_delta_u = pixel_delta_u;
 
-	return params;
+	params.primitiveCount = scene.count();
+	params.trianglesCount = scene.triangles().size();
+	params.sampleCount = scene.samples();
+	params.enviroment = scene.enviroment();
+
+	params.frameTime = dt;
+
+	g_buffer.update(params);
 }
 
-ConstantBuffer<SceneParameters> g_buffer;
+
 
 bool Render::init(HWND hwnd, const Scene& scene)
 { 
@@ -496,13 +505,8 @@ bool Render::init(HWND hwnd, const Scene& scene)
 
 	const Vector3 camera_center = { 0.0f, 0.0f, 0.0f };
 
-	SceneParameters params = calcSceneParam(width_, height_, camera_center);
-	params.primitiveCount = scene.count();
-	params.trianglesCount = scene.triangles().size();
-	params.sampleCount = scene.samples();
-	params.enviroment = scene.enviroment();
-
-	g_buffer.create(device_.Get(), params, L"SceneParameters");
+	g_buffer.create(device_.Get(), L"SceneParameters");
+	updateSceneParam(scene, camera_center, 0.0f);
 
 	createSceneSRV(scene);
 
@@ -803,24 +807,11 @@ void Render::wait()
 	frameIndex_ = swapChain_->GetCurrentBackBufferIndex();
 }
 
-float randomFloat()
-{
-	static std::uniform_real_distribution<float> distribution(0.0, 1.0);
-	static std::mt19937 generator;
-	return distribution(generator);
-}
 
 
 void Render::update(const Camera& camera, const Scene& scene, bool isDirty, float dt)
 {
-	SceneParameters param = calcSceneParam(width_, height_, camera.pos());
-	param.primitiveCount = static_cast<uint32_t>(scene.count());
-	param.trianglesCount = static_cast<uint32_t>(scene.triangles().size());
-	param.sampleCount = static_cast<uint32_t>( scene.samples() );
-	param.enviroment = scene.enviroment();
-	param.frameTime = randomFloat();
-
-	g_buffer.update( param );
+	updateSceneParam(scene, camera.pos(), dt);
 
 	if (isDirty && scene.count() > 0)
 	{

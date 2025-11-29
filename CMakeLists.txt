@@ -23,6 +23,8 @@ set(SRC
     src/input.cpp
     src/scene.h
     src/scene.cpp
+    src/utils.h
+    src/utils.cpp
 
     src/main.cpp
 )

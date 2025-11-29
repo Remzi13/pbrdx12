@@ -8,10 +8,8 @@ template<typename T>
 class ConstantBuffer
 {
 public:
-	void create(ID3D12Device* device, T data, const std::wstring& name)
+	void create(ID3D12Device* device, const std::wstring& name)
 	{
-		data_ = data;
-		
 		D3D12_HEAP_PROPERTIES uploadHeapProps =
 			CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 		D3D12_RESOURCE_DESC cbDesc =
@@ -33,8 +31,6 @@ public:
 		}
 
 		resource_->SetName(name.c_str());
-		// Копируем начальные данные
-		memcpy(begin_, &data_, sizeof(T));
 	}
 
 	void release()

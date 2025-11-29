@@ -9,6 +9,8 @@ set(SRC
     ../src/vector.h
     ../src/scene.h
     ../src/scene.cpp
+    ../src/utils.h
+    ../src/utils.cpp
     main.cpp
 )
 add_executable(pbr ${SRC})

@@ -9,7 +9,6 @@ struct HitInfo
 {
     float t;
     float3 normal;
-    float3 color;
 };
 
 cbuffer SceneConstants : register(b0)
@@ -103,7 +102,7 @@ float3 randomUniformVectorHemispher(float2 screanPos)
 // Функция для трассировки луча со сферой (Оптимизирована: a = 1.0)
 HitInfo IntersectSphere(Ray ray, float3 sphereCenter, float sphereRadius)
 {
-    HitInfo hit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
+    HitInfo hit = { FLT_MAX, float3(0, 0, 0)};
 
     // Вектор от начала луча до центра сферы: oc = A - C
     float3 oc = ray.origin - sphereCenter;
@@ -139,7 +138,7 @@ HitInfo IntersectSphere(Ray ray, float3 sphereCenter, float sphereRadius)
 
 HitInfo IntersectPlane( float3 rayOrigin, float3 rayDirection, float3 pointOnPlane, float3 normalPlane )
 {
-    HitInfo hit = { FLT_MAX, float3( 0, 0, 0 ), float3( 0, 0, 0 ) };
+    HitInfo hit = { FLT_MAX, float3( 0, 0, 0 )};
 
     // d = b * n
     float d = dot( rayDirection, normalPlane );
@@ -157,16 +156,15 @@ HitInfo IntersectPlane( float3 rayOrigin, float3 rayDirection, float3 pointOnPla
         if ( t > 0.001 && t < FLT_MAX ) 
         {
             hit.t = t;
-            hit.normal = normalPlane; // Сохраняем нормаль для последующего освещения
-            hit.color = float3( 1.0, 1.0, 0.0 );
+            hit.normal = normalPlane;
         }
     }
     return hit;
 }
 
-HitInfo IntersectPlane2( Ray ray, float3 normalPlane, float d, float3 color )
+HitInfo IntersectPlane2( Ray ray, float3 normalPlane, float d)
 {
-    HitInfo hit = { FLT_MAX, float3( 0, 0, 0 ), float3( 0, 0, 0 ) };
+    HitInfo hit = { FLT_MAX, float3( 0, 0, 0 ) };
     float dist = dot( normalPlane, ray.origin) - d;
     float dotND = dot( ray.direction, normalPlane );
         
@@ -178,21 +176,20 @@ HitInfo IntersectPlane2( Ray ray, float3 normalPlane, float d, float3 color )
         if ( t > 0.001 && t < FLT_MAX )
         {
             hit.t = t;
-            hit.normal = normalPlane; // Сохраняем нормаль для последующего освещения
-            hit.color = color;
+            hit.normal = normalPlane;
         }
     }
     return hit;
 }
 
-HitInfo IntefsectTriangle(Ray ray, Triangle tr, float3 color)
+HitInfo IntefsectTriangle(Ray ray, Triangle tr)
 {
-    const HitInfo hitMax = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
-    HitInfo hit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
+    const HitInfo hitMax = { FLT_MAX, float3(0, 0, 0) };
+    HitInfo hit = { FLT_MAX, float3(0, 0, 0)};
     const float3 normal = normalize(cross(tr.b - tr.a, tr.c - tr.a));
     const float d = dot(normal, tr.a);
     
-    hit = IntersectPlane2(ray, normal, d, color);
+    hit = IntersectPlane2(ray, normal, d);
     
     if (hit.t == FLT_MAX)
         return hitMax;
@@ -203,18 +200,46 @@ HitInfo IntefsectTriangle(Ray ray, Triangle tr, float3 color)
         return hitMax;
     if (dot(cross(tr.a - tr.c, p - tr.c), normal) < 0.0f)
         return hitMax;
+    
     return hit;
+}
+
+float3 randomCosineWeightedVectorHemispher(float2 screenPos, float3 N)
+{
+    float r1 = RandomFloat(screenPos, frameTime);
+    float r2 = RandomFloat(screenPos + 0.1, frameTime);
+    
+    // Преобразование в локальное пространство (y = cos(theta))
+    float phi = 2.0 * PI * r1;
+    float cosTheta = sqrt(r2); // Корень квадратный дает распределение cos-weighted
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    
+    float x = cos(phi) * sinTheta;
+    float z = sin(phi) * sinTheta;
+    float y = cosTheta;
+    
+    // Создаем локальный базис (Tangent, Bitangent, Normal)
+    float3 T, B;
+    float sign = N.z >= 0.0 ? 1.0 : -1.0;
+    const float a = -1.0 / (sign + N.z);
+    const float b = N.x * N.y * a;
+    T = float3(1.0 + sign * N.x * N.x * a, sign * b, -sign * N.x);
+    B = float3(b, sign + sign * N.y * N.y * a, -sign * N.y);
+    
+    // Преобразование вектора из локального пространства в мировое
+    return T * x + N * y + B * z;
 }
 
 float3 TraceScene( Ray ray, uint primitiveCount, uint trianglesCount, float2 screenPos, float depth )
 {
+
     float3 throughput = float3(1, 1, 1);
     float3 radiance = float3(0, 0, 0);
     
     for (uint d = 0; d < depth; ++d)
     {
         int matIndex = -1;
-        HitInfo closestHit = { FLT_MAX, float3(0, 0, 0), float3(0, 0, 0) };
+        HitInfo closestHit = { FLT_MAX, float3(0, 0, 0) };
         for (uint i = 0; i < primitiveCount; i++)
         {
             Primitive p = ScenePrimitives[i];
@@ -223,11 +248,10 @@ float3 TraceScene( Ray ray, uint primitiveCount, uint trianglesCount, float2 scr
             if (p.type == TYPE_SPHERE)
             {
                 currentHit = IntersectSphere(ray, p.position_point.xyz, p.radius);
-                currentHit.color = color;
             }
             else if (p.type == TYPE_PLANE)
             {
-                currentHit = IntersectPlane2(ray, p.position_point.xyz, p.radius, color);
+                currentHit = IntersectPlane2(ray, p.position_point.xyz, p.radius);
             }
 
             if (currentHit.t > 0.001 && currentHit.t < closestHit.t)
@@ -239,8 +263,7 @@ float3 TraceScene( Ray ray, uint primitiveCount, uint trianglesCount, float2 scr
         for (uint i = 0; i < trianglesCount; i++)
         {
             Triangle tr = SceneTriangles[i];
-            float3 color = SceneMaterials[tr.matIndex].albedo;
-            HitInfo currentHit = IntefsectTriangle(ray, tr, color);
+            HitInfo currentHit = IntefsectTriangle(ray, tr);
         
             if (currentHit.t > 0.001 && currentHit.t < closestHit.t)
             {
@@ -258,29 +281,25 @@ float3 TraceScene( Ray ray, uint primitiveCount, uint trianglesCount, float2 scr
         if (dot(closestHit.normal, ray.direction) > 0.0)
             closestHit.normal = -closestHit.normal;
     
-        float3 newDir = randomUniformVectorHemispher(screenPos);
-        float cosTheta = dot(newDir, closestHit.normal);
-        if (cosTheta < 0.0)
-            newDir = -newDir;
-        
-        cosTheta = dot(newDir, closestHit.normal);
-         // BRDF
-        float brdf = 1.0 / PI;
-        float pdf = 1.0 / (2.0 * PI);
+        float3 newDir = randomCosineWeightedVectorHemispher(screenPos, closestHit.normal);
+        const float cosTheta = dot(newDir, closestHit.normal);
+
 
         const Material m = SceneMaterials[matIndex];
+        // BRDF
+        const float brdf = 1.0 / PI;
+        const float pdf = cosTheta / PI;
+
         // Add emission
         radiance += throughput * m.emmision;
-
         // Update throughput
-        throughput *= m.albedo * (brdf * cosTheta / pdf);
+        throughput *= m.albedo;
 
-        // Spawn new ray        
         const float3 newOrig = ray.origin + ray.direction * closestHit.t + newDir * 1e-4;
 
         ray.origin = newOrig;
-        ray.direction = newDir;        
-    }               
+        ray.direction = newDir;
+    }
     
     return radiance;
 }
@@ -315,8 +334,6 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
         float offset_u = getUniformSampleOffset(s, sampleCount ).x;
         float offset_v = getUniformSampleOffset( s, sampleCount ).y;
 
-        // --- 1. Генерация Луча (Vector Ray Generation) ---
-        // 1. Определяем центр пикселя в 3D пространстве
         float3 pixel_center = pixel00_loc
             + ( dispatchThreadID.x + offset_u ) * pixel_delta_u
             + ( dispatchThreadID.y + offset_v ) * pixel_delta_v;
