@@ -209,16 +209,16 @@ float3 randomCosineWeightedVectorHemispher(float2 screenPos, float3 N)
     float r1 = RandomFloat(screenPos, frameTime);
     float r2 = RandomFloat(screenPos + 0.1, frameTime);
     
-    // Преобразование в локальное пространство (y = cos(theta))
-    float phi = 2.0 * PI * r1;
-    float cosTheta = sqrt(r2); // Корень квадратный дает распределение cos-weighted
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+ 
+    const float phi = 2.0 * PI * r1;
+    const float cosTheta = sqrt(r2); // Корень квадратный дает распределение cos-weighted
+    const float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
     
-    float x = cos(phi) * sinTheta;
-    float z = sin(phi) * sinTheta;
-    float y = cosTheta;
+    const float x = cos(phi) * sinTheta;
+    const float z = sin(phi) * sinTheta;
+    const float y = cosTheta;
     
-    // Создаем локальный базис (Tangent, Bitangent, Normal)
+ 
     float3 T, B;
     float sign = N.z >= 0.0 ? 1.0 : -1.0;
     const float a = -1.0 / (sign + N.z);
@@ -226,13 +226,12 @@ float3 randomCosineWeightedVectorHemispher(float2 screenPos, float3 N)
     T = float3(1.0 + sign * N.x * N.x * a, sign * b, -sign * N.x);
     B = float3(b, sign + sign * N.y * N.y * a, -sign * N.y);
     
-    // Преобразование вектора из локального пространства в мировое
+ 
     return T * x + N * y + B * z;
 }
 
 float3 TraceScene( Ray ray, uint primitiveCount, uint trianglesCount, float2 screenPos, float depth )
 {
-
     float3 throughput = float3(1, 1, 1);
     float3 radiance = float3(0, 0, 0);
     
@@ -281,19 +280,22 @@ float3 TraceScene( Ray ray, uint primitiveCount, uint trianglesCount, float2 scr
         if (dot(closestHit.normal, ray.direction) > 0.0)
             closestHit.normal = -closestHit.normal;
     
-        float3 newDir = randomCosineWeightedVectorHemispher(screenPos, closestHit.normal);
-        const float cosTheta = dot(newDir, closestHit.normal);
-
+        float3 newDir = randomUniformVectorHemispher(screenPos);
+        float cosTheta = dot(newDir, closestHit.normal);
+        if (cosTheta < 0.0)
+            newDir = -newDir;
+        
+        cosTheta = dot(newDir, closestHit.normal);
+         // BRDF
+        const float brdf = 1.0 / PI;
+        const float pdf = 1.0 / (2.0 * PI);
 
         const Material m = SceneMaterials[matIndex];
-        // BRDF
-        const float brdf = 1.0 / PI;
-        const float pdf = cosTheta / PI;
-
         // Add emission
         radiance += throughput * m.emmision;
+
         // Update throughput
-        throughput *= m.albedo;
+        throughput *= m.albedo * (brdf * cosTheta / pdf);
 
         const float3 newOrig = ray.origin + ray.direction * closestHit.t + newDir * 1e-4;
 
@@ -314,16 +316,12 @@ float3 getUniformSampleOffset( int index, int side_count )
 
     return float3( ( halfDist + x * dist ) - 0.5, ( halfDist + y * dist ) - 0.5, 0.0 );
 }
-//---------------------------------------------------------------------------------
-// Главная функция вычислительного шейдера
-//--------------------------------------------------------------------------------------
 
 [numthreads(8, 8, 1)]
 void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
     uint width, height;
     OutputTexture.GetDimensions(width, height);
-
 
     if (dispatchThreadID.x >= width || dispatchThreadID.y >= height)
         return;
@@ -344,7 +342,6 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
         ray.direction = normalize(pixel_center - camera_center);
         
         accumulatedColor += TraceScene(ray, primitiveCount, trianglesCount, pixel_center.xy, 4);
-
     }
 
     OutputTexture[dispatchThreadID.xy] = float4(accumulatedColor / float( sampleCount * sampleCount ), 0.0);
