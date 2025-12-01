@@ -394,13 +394,13 @@ Vector3 trace_iterative(Ray ray, const Scene& scene, int maxDepth)
 		
 		radiance += throughput * m.emmision;
 
-		const float brdf = 1.0 / PI;
-		const float pdf = 1.0 / (2.0 * PI);
+		const float brdf = 1.0f / PI;
+		const float pdf = 1.0f / (2.0f * PI);
 
 		throughput = throughput * m.albedo * (brdf * cosTheta / pdf);
 
 		
-		const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4;
+		const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4f;
 
 		ray.origin = newOrig;
 		ray.direction = newDir;

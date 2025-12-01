@@ -12,7 +12,6 @@
 class TaskManager
 {
 public:
-
     TaskManager(int numThreads, int maxTasks);
 
     template <typename Callable, typename... Args>
@@ -39,33 +38,11 @@ public:
     void stop();
 
 private:
-    template <typename Callable, typename... Args>
-    class Task {
-    private:
-        Callable func_;
-        using DecayedArgs = std::tuple<std::decay_t<Args>...>;
-        DecayedArgs args_tuple_;
-
-    public:
-        Task(Callable&& func, Args&&... args)
-            : func_(std::forward<Callable>(func)),
-            args_tuple_(std::make_tuple(std::forward<Args>(args)...))
-        {
-
-        }
-
-        void operator()() {
-
-            std::apply(func_, args_tuple_);
-        }
-    };
-
     std::mutex tasksMutex_;
     std::deque<std::function<void()>> tasks_;
+    int maxTasks_;
 
     std::vector<std::thread> threads_;
     std::condition_variable condition_;
     bool isRunning_;
-    int maxTasks_;
-
 };
