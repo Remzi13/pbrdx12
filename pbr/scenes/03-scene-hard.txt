@@ -2,7 +2,7 @@
 3
 
 # Width, height, number of samples per side
-320 240 2
+320 240 32
 
 # Environment (r, g, b)
 0.000 0.000 0.000

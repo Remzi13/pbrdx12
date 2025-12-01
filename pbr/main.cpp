@@ -11,6 +11,7 @@
 
 #include "../src/vector.h"
 #include "../src/scene.h"
+#include "../src/concurrency.h"
 
 struct Ray
 {
@@ -395,7 +396,7 @@ Vector3 trace_iterative(Ray ray, const Scene& scene, int maxDepth)
 
 		const float brdf = 1.0 / PI;
 		const float pdf = 1.0 / (2.0 * PI);
-				
+
 		throughput = throughput * m.albedo * (brdf * cosTheta / pdf);
 
 		
@@ -441,10 +442,17 @@ int main()
 	{
 		for ( int x = 0; x < width; ++x )
 		{
-			Vector3 color( 0, 0, 0);
-			const float u = float(x) / width;
-			const float v = float(y) / height;
-			
+			while (!manager.add([width, height, SIDE_SAMPLE_COUNT, pixSize, cameraOrigin, aspectRatio, leftTop](int x, int y, std::vector<Vector3>& data, const Scene& scene) {
+				Vector3 color(0, 0, 0);
+				const float u = float(x) / width;
+				const float v = float(y) / height;
+				
+				for (int s = 0; s < SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT; ++s)
+				{
+					//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0 + x * pixSize, pixSize / 2.0 + y * pixSize, 0 );
+					//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0f + u * aspectRatio, -pixSize / 2.0f - v, 0.0f );
+					const Vector3 offset = getUniformSampleOffset(s, SIDE_SAMPLE_COUNT);
+					const Vector3 pixPos = leftTop + Vector3(pixSize * offset.x() + u * aspectRatio, -pixSize * offset.y() - v, 0.0f);
 			for ( int s = 0; s < SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT; ++s )
 			{
 				//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0 + x * pixSize, pixSize / 2.0 + y * pixSize, 0 );
@@ -462,7 +470,8 @@ int main()
 			data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);
 		}
 	}
-		
+	manager.stop();
+
 	auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
 	std::cout << "Time: " << duration_ms.count() << " milliseconds" << std::endl;
 
