@@ -2,7 +2,7 @@
 
 #include "vector.h"
 
-constexpr float PI = 3.14;
+constexpr float PI = 3.14f;
 
 float randomFloat();
 float randFloat(float min, float max);

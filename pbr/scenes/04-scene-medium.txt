@@ -2,7 +2,7 @@
 4
 
 # Width, height, number of samples per side
-320 240 16
+320 240 32
 
 # Camera position (x, y, z), target position (x, y, z), up vector (x, y, z), FOV y (angle in degrees)
 0.0 0.0 0.0 0.0 0.0 1.0 0.0 1.0 0.0 60.0
@@ -29,7 +29,7 @@
 0.0 1.0 0.0 -2.0 2
 
 # Number of triangles
-100
+970
 # A (x, y, z), B (x, y, z), C(x, y, z), material index)
 -2.0 -2.0 4.0 -2.0 -2.0 8.0 -2.0 2.0 8.0 1
 -2.0 -2.0 4.0 -2.0 2.0 8.0 -2.0 2.0 4.0 1

@@ -3,15 +3,16 @@
 #include <iosfwd>
 #include <string>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <math.h>
-#include <sstream>
 #include <chrono>
-#include <random>
+#include <algorithm>
 
 #include "../src/vector.h"
 #include "../src/scene.h"
 #include "../src/concurrency.h"
+#include "../src/utils.h"
 
 struct Ray
 {
@@ -153,13 +154,6 @@ float intersectSphere(const Ray& ray, const Vector3& center, float radius, float
 //	return Vector3( haflDist + x * dist, haflDist + y * dist, 0.0 );
 //}
 
-float randomFloat()
-{
-	static std::uniform_real_distribution<float> distribution(0.0, 1.0);
-	static std::mt19937 generator;
-	return distribution(generator);
-}
-
 Vector3 getUniformSampleOffset(int index, int side_count)
 {	
 	const float x_idx = (float)(index % side_count);
@@ -177,29 +171,6 @@ Vector3 getUniformSampleOffset(int index, int side_count)
 }
 
 
-
-float randFloat( float min, float max )
-{
-	return min + ( max - min ) * ( randomFloat() );
-}
-
-Vector3 randVector( float min, float max )
-{
-	return Vector3( randFloat( min, max ), randFloat( min, max ), randFloat( min, max ) );
-}
-
-Vector3 randUnitVector()
-{
-	while ( true )
-	{
-		Vector3 p = randVector( -1, 1 );
-		float l = p.length_squared();
-		if ( 1e-160 < l && l <= 1 )
-			return p / std::sqrt( l );
-	}
-}
-
-const float PI = 3.14f;
 Vector3 randomUniformVectorHemispher()
 {
 	float phi = randFloat(0, 1) * 2.0f * PI;
@@ -227,7 +198,6 @@ Vector3 reflect(const Vector3& d, const Vector3& n)
 
 Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 {
-
 	const float tMin = 0.001f;
 	float tMax = 10000;
 	Vector3 hitNormal;
@@ -271,7 +241,7 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 	if ( dot( hitNormal, ray.direction ) > 0.0 )
 		hitNormal = -hitNormal;
 
-	const Material m = scene.material( matIndex );
+	const Material m = scene.materials()[ matIndex ];
 	Vector3 newDir;
 	float brdf = 1.0f / PI;
 	float pdf = 1.0f / ( 2.0f * PI );
@@ -281,8 +251,8 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 	{
 		newDir = randomUniformVectorHemispher();
 		cosTheta = dot(newDir, hitNormal);
-		//if (cosTheta < 0.0)
-	//		newDir *= -1;
+		if (cosTheta < 0.0)
+			newDir *= -1;
 	}
 	else if ( m.type == 1 )
 	{
@@ -438,36 +408,34 @@ int main()
 	const int SIDE_SAMPLE_COUNT = scene.samples();
 	auto start = std::chrono::high_resolution_clock::now();
 
-	for ( int y = 0; y < height; ++y )
+	TaskManager manager(8, 32);
+
+	for (int y = 0; y < height; ++y)
 	{
-		for ( int x = 0; x < width; ++x )
+		for (int x = 0; x < width; ++x)
 		{
-			while (!manager.add([width, height, SIDE_SAMPLE_COUNT, pixSize, cameraOrigin, aspectRatio, leftTop](int x, int y, std::vector<Vector3>& data, const Scene& scene) {
+			while (!manager.add([&](int x, int y, std::vector<Vector3>& data, const Scene& scene) {
 				Vector3 color(0, 0, 0);
 				const float u = float(x) / width;
 				const float v = float(y) / height;
-				
+
 				for (int s = 0; s < SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT; ++s)
 				{
 					//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0 + x * pixSize, pixSize / 2.0 + y * pixSize, 0 );
 					//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0f + u * aspectRatio, -pixSize / 2.0f - v, 0.0f );
 					const Vector3 offset = getUniformSampleOffset(s, SIDE_SAMPLE_COUNT);
-					const Vector3 pixPos = leftTop + Vector3(pixSize * offset.x() + u * aspectRatio, -pixSize * offset.y() - v, 0.0f);
-			for ( int s = 0; s < SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT; ++s )
-			{
-				//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0 + x * pixSize, pixSize / 2.0 + y * pixSize, 0 );
-				//Vector3 pixPos = leftTop + Vector3( pixSize / 2.0f + u * aspectRatio, -pixSize / 2.0f - v, 0.0f );
-				const Vector3 offset = getUniformSampleOffset( s, SIDE_SAMPLE_COUNT );
-				const Vector3 pixPosVS = leftTop + Vector3( (pixSize * offset.x() + u * aspectRatio) * viewportHight, (-pixSize * offset.y() - v) * viewportHight, 0.0f );
-				const Vector3 pixPos = camera.pos + pixPosVS.x() * camerRight + pixPosVS.y() * camerUp + pixPosVS.z() * camerForward;
+					const Vector3 pixPosVS = leftTop + Vector3((pixSize * offset.x() + u * aspectRatio) * viewportHight, (-pixSize * offset.y() - v) * viewportHight, 0.0f);
+					const Vector3 pixPos = camera.pos + pixPosVS.x() * camerRight + pixPosVS.y() * camerUp + pixPosVS.z() * camerForward;
 
-				const Vector3 dir = unit_vector( pixPos - camera.pos );
-				const Ray ray( { camera.pos, dir } );
-				color += trace_iterative( ray, scene, 4 );
-				//color += trace(ray, scene, 0);
-			}
+					const Vector3 dir = unit_vector(pixPos - camera.pos);
+					const Ray ray({ camera.pos, dir });
+					//color += trace_iterative( ray, scene, 4 );
+					color += trace(ray, scene, 0);
+				}
 
-			data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);
+				data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);
+				}, x, y, std::ref(data), scene)
+			){}
 		}
 	}
 	manager.stop();
