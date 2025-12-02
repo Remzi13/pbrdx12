@@ -33,6 +33,14 @@ struct Material
 	int type;
 };
 
+struct Camera
+{
+	Vector3 pos;
+	Vector3 target;
+	Vector3 up;
+	float fov;
+};
+
 class Scene
 {
 public:
@@ -48,6 +56,8 @@ public:
 	Vector3 enviroment() const { return enviroment_; }
 	Material material( int index ) const { return materials_[index]; }
 
+	const Camera& camera() const { return camera_; }
+
 	const std::vector<Sphere>& spheres() const { return spheres_; }
 	const std::vector<Plane>& planes() const { return planes_; }
 	const std::vector<Triangle>& triangles() const { return triangles_; }
@@ -62,6 +72,7 @@ private:
 	int samples_;
 	int width_;
 	int height_;
+	Camera camera_;
 	Vector3 enviroment_;
 	std::vector<Material> materials_;
 	std::vector<Sphere> spheres_;

@@ -50,6 +50,14 @@ void Scene::parse( const std::string& filename ) {
 	ss = getNextDataLine( file );
 
 	ss >> width_ >> height_ >> samples_;
+	// Camera 
+	ss = getNextDataLine( file );
+	float px, py, pz, tx, ty, tz, ux, uy, uz, fov;
+	ss >> px >> py >> pz >> tx >> ty >> tz >> ux >> uy >> uz >> fov;
+	camera_.pos = Vector3( px, py, pz );
+	camera_.target = Vector3( tx, ty, tz );
+	camera_.up = Vector3( ux, uy, uz );
+	camera_.fov = fov;
 
 	// 2. Enviroment 
 	ss = getNextDataLine( file );
