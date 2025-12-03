@@ -78,7 +78,7 @@ void Scene::parse( const std::string& filename ) {
 		ss >> r1 >> g1 >> b1 >> r2 >> g2 >> b2 >> type;
 		Material mat;
 		mat.albedo = Vector3( r1, g1, b1 );
-		mat.emmision = Vector3( r2, g2, b2 );
+		mat.emission = Vector3( r2, g2, b2 );
 		mat.type = type;
 		materials_.push_back( mat );
 	}

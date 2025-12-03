@@ -1,11 +1,8 @@
 #include <iostream>
-#include <ostream>
-#include <iosfwd>
-#include <string>
 #include <fstream>
 #include <sstream>
 #include <vector>
-#include <math.h>
+
 #include <chrono>
 #include <algorithm>
 
@@ -260,7 +257,6 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 		cosTheta = 1.0f;
 		brdf = 1.0f;
 		pdf = 1.0f;
-		// cosTheta -> 0
 	}
 	
 	//const Vector3 newDir = randOnHemispher( hitNormal );
@@ -271,22 +267,21 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 	Vector3 color;
 	if (depth > 4)
 	{
-		return scene.enviroment();
+		color = scene.enviroment();
+		//float p = randFloat( 0, 1 );
+		//if ( p <= 0.5 )
+		//{
+		//	color = m.emmision;
+		//}
+		//else
+		//{
+		//	color = trace( newRay, scene, depth + 1 ) * brdf * std::abs( cosTheta ) / pdf * m.albedo + m.emmision;
+		//	color *= 1.0f / ( 1.0f - p );
+		//}
 	}
-	//	float p = randFloat( 0, 1 );
-	//	if ( p <= 0.5 )
-	//	{
-	//		color = m.emmision;
-	//	}
-	//	else
-	//	{
-	//		color = trace( newRay, scene, depth + 1 ) * brdf * std::abs( cosTheta ) / pdf * m.albedo + m.emmision;
-	//		color *= 1.0f / ( 1.0f - p );
-	//	}
-	//}
-	//else
+	else
 	{
-		color = trace( newRay, scene, depth + 1 ) * brdf * std::abs( cosTheta ) / pdf * m.albedo + m.emmision;
+		color = trace( newRay, scene, depth + 1 ) * brdf * std::abs( cosTheta ) / pdf * m.albedo + m.emission;
 	}
 
 	return color;
@@ -362,7 +357,7 @@ Vector3 trace_iterative(Ray ray, const Scene& scene, int maxDepth)
 		const Material m = scene.materials()[matIndex];
 
 		
-		radiance += throughput * m.emmision;
+		radiance += throughput * m.emission;
 
 		const float brdf = 1.0f / PI;
 		const float pdf = 1.0f / (2.0f * PI);
@@ -379,6 +374,44 @@ Vector3 trace_iterative(Ray ray, const Scene& scene, int maxDepth)
 	return radiance;
 }
 
+
+std::atomic<int> completed_pixels( 0 );
+
+void display_progress( int total_pixels ) {
+	const int BAR_LENGTH = 50;
+	int last_percentage = -1;
+
+	while ( completed_pixels.load() < total_pixels ) {
+		int current = completed_pixels.load();
+
+		int percentage = ( current * 100 ) / total_pixels;
+		int filled_length = ( percentage * BAR_LENGTH ) / 100;
+
+		if ( percentage > last_percentage ) {
+			std::cout << "\r[";
+						
+			for ( int i = 0; i < filled_length; ++i ) {
+				std::cout << "#";
+			}
+						
+			for ( int i = filled_length; i < BAR_LENGTH; ++i ) {
+				std::cout << " ";
+			}
+
+			std::cout << "] " << percentage << "% (" << current << "/" << total_pixels << ")";
+			std::cout.flush();
+			last_percentage = percentage;
+		}
+
+		std::this_thread::sleep_for( std::chrono::milliseconds( 200 ) );
+	}
+
+	std::cout << "\r[";
+	for ( int i = 0; i < BAR_LENGTH; ++i ) std::cout << "#";
+	std::cout << "] 100% (" << total_pixels << "/" << total_pixels << ")\n";
+	std::cout.flush();
+}
+
 int main()
 {
 	Scene scene;
@@ -392,9 +425,9 @@ int main()
 	const std::uint16_t height = scene.height();
 	const float aspectRatio = float(width) / height;
 	auto& camera = scene.camera();
-	Vector3 camerForward = unit_vector( camera.target - camera.pos );
-	Vector3 camerRight = unit_vector(cross( camera.up, camerForward ));
-	Vector3 camerUp =  cross( camerForward, camerRight );
+	const Vector3 camerForward = unit_vector( camera.target - camera.pos );
+	const Vector3 camerRight = unit_vector(cross( camera.up, camerForward ));
+	const Vector3 camerUp =  cross( camerForward, camerRight );
 		
 	const float pixSize = 1.0f / height;
 	const float viewportHight = 2.0f * std::tan( (camera.fov / 180.0f * PI) * 0.5f );
@@ -408,7 +441,10 @@ int main()
 	const int SIDE_SAMPLE_COUNT = scene.samples();
 	auto start = std::chrono::high_resolution_clock::now();
 
-	TaskManager manager(8, 32);
+	TaskManager manager(4, 32);
+
+	completed_pixels = 0;
+	std::thread progress_thread( display_progress, (int)data.size() );
 
 	for (int y = 0; y < height; ++y)
 	{
@@ -434,12 +470,17 @@ int main()
 				}
 
 				data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);
+				completed_pixels.fetch_add( 1 );
 				}, x, y, std::ref(data), scene)
-			){}
+			){
+				std::this_thread::yield();
+			}
 		}
 	}
 	manager.stop();
-
+	if ( progress_thread.joinable() ) {
+		progress_thread.join();
+	}
 	auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - start);
 	std::cout << "Time: " << duration_ms.count() << " milliseconds" << std::endl;
 

@@ -29,7 +29,7 @@ struct Triangle
 struct Material
 {
 	Vector3 albedo;
-	Vector3 emmision;
+	Vector3 emission;
 	int type;
 };
 
