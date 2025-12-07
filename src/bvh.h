@@ -44,7 +44,7 @@ private:
 	};
 
 	void split(Node& parent, int depth = 0) const;
-	void printNode(const Node& node, int depth) const;
+	void printNode(const Node& node, int depth, int& emptyCount, int& heavyCount) const;
 	float intersect(const math::Ray& ray, const Node& node, float tMin, float tMax, math::Triangle& tr) const;
 
 	std::unique_ptr<Node> root_;

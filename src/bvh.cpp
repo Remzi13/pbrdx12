@@ -8,10 +8,10 @@ namespace {
     {
         for (int i = 0; i < 3; i++)
         {
-            float origin = ray.origin[i];
-            float dir = ray.direction[i];
-            float minB = box.min()[i];
-            float maxB = box.max()[i];
+            const float origin = ray.origin[i];
+            const float dir = ray.direction[i];
+            const float minB = box.min()[i];
+            const float maxB = box.max()[i];
                         
             if (fabs(dir) < 1e-8f)
             {
@@ -20,7 +20,7 @@ namespace {
                 continue;
             }
 
-            float invD = 1.0f / dir;
+            const float invD = 1.0f / dir;
             float t0 = (minB - origin) * invD;
             float t1 = (maxB - origin) * invD;
 
@@ -86,17 +86,27 @@ void BVH::build(const std::vector<math::Triangle>& triangles)
 
 void BVH::print() const
 {
-	if (!root_)
-	{
-		std::cout << "BVH is empty.\n";
-		return;
-	}
-	printNode(*root_, 0);
+    if (!root_)
+    {
+        std::cout << "BVH is empty.\n";
+        return;
+    }
+    
+    int emptyNodes = 0;
+    int heavyNodes = 0;
+    
+    printNode(*root_, 0, emptyNodes, heavyNodes);
+    
+    std::cout << "--------------------------------\n";
+    std::cout << "BVH Statistics:\n";
+    std::cout << "Total Empty Nodes (0 tris): " << emptyNodes << "\n";
+    std::cout << "Total Heavy Nodes (>8 tris): " << heavyNodes << "\n";
+    std::cout << "--------------------------------\n";
 }
 
 void BVH::split(Node& parent, int depth) const
 {
-    if (depth > 20) return;
+    if (depth > 10) return;
     if (parent.triangles.size() <= 2) return;
 
     Vector3 size = parent.box.size();
@@ -182,24 +192,37 @@ float BVH::intersect(const math::Ray& ray, const Node& node, float tMin, float t
     }
 }
 
-void BVH::printNode(const Node& node, int depth) const
+
+void BVH::printNode(const Node & node, int depth, int& emptyCount, int& heavyCount) const
 {
-	
-	for (int i = 0; i < depth; i++)
-		std::cout << "  ";
+    
+    if (node.triangles.empty()) {
+        emptyCount++;
+    }
+    if (node.triangles.size() > 8) {
+        heavyCount++;
+    }
+    
+    for (int i = 0; i < depth; i++)
+        std::cout << "  ";
 
-	const Vector3 size = node.box.size();
-	const Vector3 center = node.box.center();
+    const Vector3 size = node.box.size();
+    const Vector3 center = node.box.center();
 
-	std::cout << "Node(depth=" << depth
-		<< ", tris=" << node.triangles.size()
-		<< ", center=[" << center.x() << ", " << center.y() << ", " << center.z() << "]"
-		<< ", size=[" << size.x() << ", " << size.y() << ", " << size.z() << "])\n";
+    std::cout << "Node(depth=" << depth
+        << ", tris=" << node.triangles.size()
+        << ", center=[" << center.x() << ", " << center.y() << ", " << center.z() << "]"
+        << ", size=[" << size.x() << ", " << size.y() << ", " << size.z() << "])";
 
+    
+    if (node.triangles.size() > 8) std::cout << " <--- HEAVY";
+    if (node.triangles.empty() && !node.childA && !node.childB) std::cout << " <--- USELESS LEAF";
 
-	if (node.childA)
-		printNode(*node.childA, depth + 1);
+    std::cout << "\n";
 
-	if (node.childB)
-		printNode(*node.childB, depth + 1);
+    if (node.childA)
+        printNode(*node.childA, depth + 1, emptyCount, heavyCount);
+
+    if (node.childB)
+        printNode(*node.childB, depth + 1, emptyCount, heavyCount);
 }

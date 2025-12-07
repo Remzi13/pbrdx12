@@ -139,7 +139,6 @@ void Scene::parse( const std::string& filename ) {
 	}
 
 	bvh_.build(trs);
-	//bvh_.print();
 }
 
 
