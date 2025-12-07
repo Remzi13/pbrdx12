@@ -1,6 +1,48 @@
+#include "utils.h"
+
 #include <random>
 
-#include "vector.h"
+namespace math {
+	Vector3 triangleCenter(const Triangle& triangle)
+	{
+		return (triangle.a + triangle.b + triangle.c) / 3.0f;
+	}
+
+	float intersectPlane2(const math::Ray& ray, const Vector3& normal, float d, float tMin, float tMax)
+	{
+		const float dist = dot(normal, ray.origin) - d;
+		const float dotND = dot(ray.direction, normal);
+		if (dotND == 0.0)
+		{
+			if (dist == 0.0 && tMin == 0.0)
+			{
+				return 0.0;
+			}
+			return tMax;
+		}
+		const float t = dist / -dotND;
+		if (t< tMin || t > tMax)
+			return tMax;
+		return t;
+	}
+
+	float intersectTriangle(const math::Ray& ray, const Vector3& a, const Vector3& b, const Vector3& c, float tMin, float tMax)
+	{
+		const Vector3 normal = unit_vector(cross(b - a, c - a));
+		const float d = dot(normal, a);
+		const float t = intersectPlane2(ray, normal, d, tMin, tMax);
+		if (t == tMax)
+			return tMax;
+		const Vector3 p = ray.origin + ray.direction * t;
+		if (dot(cross(b - a, p - a), normal) < 0.0f)
+			return tMax;
+		if (dot(cross(c - b, p - b), normal) < 0.0f)
+			return tMax;
+		if (dot(cross(a - c, p - c), normal) < 0.0f)
+			return tMax;
+		return t;
+	}
+}
 
 float randomFloat()
 {

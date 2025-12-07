@@ -11,11 +11,6 @@
 #include "../src/concurrency.h"
 #include "../src/utils.h"
 
-struct Ray
-{
-	Vector3 origin;
-	Vector3 direction;
-};
 
 float srgb( float x )
 {
@@ -77,7 +72,7 @@ void saveImageToFile( std::uint16_t width, std::uint16_t height, const std::vect
 }
 
 //можно использовать точку и дистанцию 
-float intersectPlane( Ray ray,  Vector3 poinOnPlane, Vector3 normPlane, float tMin, float tMax )
+float intersectPlane( const math::Ray& ray,  Vector3 poinOnPlane, Vector3 normPlane, float tMin, float tMax )
 {
 	float t =  dot( (poinOnPlane - ray.origin ) , normPlane ) / dot( ray.direction , normPlane );
 	if ( t > tMin && t < tMax )
@@ -90,42 +85,8 @@ float intersectPlane( Ray ray,  Vector3 poinOnPlane, Vector3 normPlane, float tM
 	}
 }
 
-float intersectPlane2( const Ray& ray, const Vector3& normal, float d, float tMin, float tMax )
- {
-	const float dist = dot( normal, ray.origin ) - d;
-	const float dotND = dot( ray.direction, normal );
-	if ( dotND == 0.0 )
-	{
-		if ( dist == 0.0 && tMin == 0.0)
-		{
-			return 0.0;
-		}
-		return tMax;
-	}
-	const float t = dist / -dotND;
-	if ( t< tMin || t > tMax )
-		return tMax;
-	return t;
-}
 
-float intersectTriangle( const Ray& ray, const Vector3& a, const Vector3& b, const Vector3& c, float tMin, float tMax )
-{
-	const Vector3 normal = unit_vector( cross( b- a, c - a ) );
-	const float d = dot( normal, a );
-	const float t = intersectPlane2( ray, normal, d, tMin, tMax );
-	if ( t == tMax )
-		return tMax;
-	const Vector3 p = ray.origin + ray.direction * t;
-	if ( dot( cross( b - a, p - a ), normal ) < 0.0f )
-		return tMax;
-	if ( dot( cross( c - b, p - b ), normal ) < 0.0f )
-		return tMax;
-	if ( dot( cross( a - c, p - c ), normal ) < 0.0f )
-		return tMax;
-	return t;
-}
-
-float intersectSphere(const Ray& ray, const Vector3& center, float radius, float tMin, float tMax)
+float intersectSphere(const math::Ray& ray, const Vector3& center, float radius, float tMin, float tMax)
 {
 	const Vector3 origin = ray.origin - center; // сдвигаем сферу в центр 
 	const float A = 1;
@@ -193,7 +154,7 @@ Vector3 reflect(const Vector3& d, const Vector3& n)
 	return d - 2.0f * dot(d, n) * n;
 }
 
-Vector3 trace( const Ray& ray, const Scene& scene, int depth )
+Vector3 trace( const math::Ray& ray, const Scene& scene, int depth )
 {
 	const float tMin = 0.001f;
 	float tMax = 10000;
@@ -222,15 +183,23 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 			matIndex = p.matIndex;
 		}
 	}
-	for ( const auto& tr : scene.triangles() )
+	//for ( const auto& tr : scene.triangles() )
+	//{
+	//	float t = intersectTriangle( ray, tr.a, tr.b, tr.c, tMin, tMax );
+	//	if ( t < tMax )
+	//	{
+	//		hitNormal = unit_vector( cross( tr.b - tr.a, tr.c - tr.a ) );
+	//		tMax = t;
+	//		matIndex = tr.matIndex;
+	//	}
+	//}
+	math::Triangle tr;
+	float t = scene.intersect(ray, tMin, tMax, tr);
+	if (t < tMax)
 	{
-		float t = intersectTriangle( ray, tr.a, tr.b, tr.c, tMin, tMax );
-		if ( t < tMax )
-		{
-			hitNormal = unit_vector( cross( tr.b - tr.a, tr.c - tr.a ) );
-			tMax = t;
-			matIndex = tr.matIndex;
-		}
+		hitNormal = unit_vector( cross( tr.b - tr.a, tr.c - tr.a ) );
+		tMax = t;
+		matIndex = tr.matIndex;
 	}
 	if ( tMax == 10000 )
 		return scene.enviroment();
@@ -262,7 +231,7 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 	//const Vector3 newDir = randOnHemispher( hitNormal );
 	
 	const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4f;	
-	const Ray newRay( {newOrig, newDir } );
+	const math::Ray newRay( {newOrig, newDir } );
 	
 	Vector3 color;
 	if (depth > 4)
@@ -287,7 +256,7 @@ Vector3 trace( const Ray& ray, const Scene& scene, int depth )
 	return color;
 }
 
-Vector3 trace_iterative(Ray ray, const Scene& scene, int maxDepth)
+Vector3 trace_iterative( math::Ray ray, const Scene& scene, int maxDepth)
 {
 	Vector3 throughput = Vector3(1.0, 1.0, 1.0);
 	Vector3 radiance = Vector3(0.0, 0.0, 0.0);
@@ -420,6 +389,7 @@ int main()
 	//scene.load( "../scenes/03-scene-easy.txt" );
 	//scene.load( "../scenes/04-scene-easy.txt" );
 	scene.load( "../scenes/04-scene-medium.txt" );
+	//scene.load("../scenes/04-scene-hard.txt");
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
@@ -441,7 +411,7 @@ int main()
 	const int SIDE_SAMPLE_COUNT = scene.samples();
 	auto start = std::chrono::high_resolution_clock::now();
 
-	TaskManager manager(8, 32);
+	TaskManager manager(8, 128);
 
 	completed_pixels = 0;
 	std::thread progress_thread( display_progress, (int)data.size() );
@@ -464,14 +434,14 @@ int main()
 					const Vector3 pixPos = camera.pos + pixPosVS.x() * camerRight + pixPosVS.y() * camerUp + pixPosVS.z() * camerForward;
 
 					const Vector3 dir = unit_vector(pixPos - camera.pos);
-					const Ray ray({ camera.pos, dir });
+					const math::Ray ray({ camera.pos, dir });
 					//color += trace_iterative( ray, scene, 4 );
 					color += trace(ray, scene, 0);
 				}
 
 				data[y * width + x] = color / float(SIDE_SAMPLE_COUNT * SIDE_SAMPLE_COUNT);
 				completed_pixels.fetch_add( 1 );
-				}, x, y, std::ref(data), scene)
+				}, x, y, std::ref(data), std::cref(scene))
 			){
 				std::this_thread::yield();
 			}

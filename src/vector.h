@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <ostream>
+#include <algorithm>
 
 class Vector3 {
 public:
@@ -110,6 +111,24 @@ inline Vector3 cross( const Vector3& u, const Vector3& v ) {
 
 inline Vector3 unit_vector( const Vector3& v ) {
 	return v / v.length();
+}
+
+inline Vector3 min(const Vector3& a, const Vector3& b)
+{
+	return Vector3{
+		std::min(a.x(), b.x()),
+		std::min(a.y(), b.y()),
+		std::min(a.z(), b.z())
+	};
+}
+
+inline Vector3 max(const Vector3& a, const Vector3& b)
+{
+	return Vector3{
+		std::max(a.x(), b.x()),
+		std::max(a.y(), b.y()),
+		std::max(a.z(), b.z())
+	};
 }
 
 

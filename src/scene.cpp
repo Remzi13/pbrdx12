@@ -121,17 +121,29 @@ void Scene::parse( const std::string& filename ) {
 	int numTriangles;
 	ss >> numTriangles;
 
+	std::vector<math::Triangle> trs;
 	for ( int i = 0; i < numTriangles; ++i ) {
 		ss = getNextDataLine( file );
 
 		float x1, y1, z1, x2, y2, z2, x3, y3, z3, matIndex;
 		ss >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3  >> matIndex;
 
-		Triangle t;
+		math::Triangle t;
 		t.a = Vector3( x1, y1, z1  );
 		t.b = Vector3( x2, y2, z2  );
 		t.c = Vector3( x3, y3, z3  );
 		t.matIndex = (int)matIndex;
 		triangles_.push_back( t );
+
+		trs.push_back(t);
 	}
+
+	bvh_.build(trs);
+	//bvh_.print();
+}
+
+
+float Scene::intersect(const math::Ray& ray, float tMin, float tMax, math::Triangle& tr) const
+{
+	return bvh_.intersect(ray, tMin, tMax, tr);
 }

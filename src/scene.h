@@ -1,6 +1,8 @@
 #pragma once 
 
+
 #include "vector.h"
+#include "bvh.h"
 
 #include <vector>
 
@@ -18,13 +20,6 @@ struct Plane
 	int matIndex;
 };
 
-struct Triangle
-{
-	Vector3 a;
-	Vector3 b;
-	Vector3 c;
-	int matIndex;
-};
 
 struct Material
 {
@@ -62,10 +57,12 @@ public:
 
 	const std::vector<Sphere>& spheres() const { return spheres_; }
 	const std::vector<Plane>& planes() const { return planes_; }
-	const std::vector<Triangle>& triangles() const { return triangles_; }
+	const std::vector<math::Triangle>& triangles() const { return triangles_; }
 	const std::vector<Material>& materials() const { return materials_; }
 
 	size_t count() const { return spheres_.size() + planes_.size(); }
+
+	float intersect(const math::Ray& ray, float tMin, float tMax, math::Triangle& tr) const;
 
 private:
 	void parse( const std::string& filename );	
@@ -80,5 +77,7 @@ private:
 	std::vector<Material> materials_;
 	std::vector<Sphere> spheres_;
 	std::vector<Plane> planes_;
-	std::vector<Triangle> triangles_;
+	std::vector<math::Triangle> triangles_;
+
+	BVH bvh_;
 };
