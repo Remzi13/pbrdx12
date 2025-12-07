@@ -141,37 +141,43 @@ void updateSceneParam(const Scene& scene, const Vector3& cameraCenter, float dt)
 	const float FOCAL_LENGTH = 1.0f;     // Соответствует leftTop.z
 	const float VIEWPORT_HEIGHT = 1.0f;  // Изменение: высота от -0.5 до 0.5 (Всего 1.0)
 
-	const float aspectRatio = (float)scene.width() / (float)scene.height();
-	const float viewport_width = VIEWPORT_HEIGHT * aspectRatio;
-
-	// 2. Векторы U и V
-	// viewport_u (шаг по X) и viewport_v (шаг по Y, отрицательный для инверсии)
-	// Это соответствует направлению U/V, используемому в цикле
-	const Vector3 viewport_u = { viewport_width, 0.0f, 0.0f };
-	const Vector3 viewport_v = { 0.0f, -VIEWPORT_HEIGHT, 0.0f }; // V направлен вниз
-
-	// 3. Направление Взгляда
-	// Камера в (0, 0, 0) смотрит на Z=1.0
-	const Vector3 look_direction = { 0.0f, 0.0f, FOCAL_LENGTH };
-	// (Ваш оригинальный код уже использовал FOCAL_LENGTH, это правильно)
-
-	// 4. Верхний Левый Угол (Viewport Upper Left)
-	// cameraCenter + look_direction = (0, 0, 1)
-	// - viewport_u / 2.0f = Сдвиг влево на половину ширины
-	// - viewport_v / 2.0f = Сдвиг вверх на 0.5
-	const Vector3 viewport_upper_left = cameraCenter + look_direction - viewport_u / 2.0f - viewport_v / 2.0f;
-
-	// 5. Центр Пикселя (pixel00_loc)
-	// Это центр первого пикселя.
-	const Vector3 pixel_delta_u = viewport_u / (float)scene.width();
-	const Vector3 pixel_delta_v = viewport_v / (float)scene.height();
-	const Vector3 pixel00_loc = viewport_upper_left + 0.5f * (pixel_delta_u + pixel_delta_v);
-
+	const Camera& camera = scene.camera();
 	SceneParameters params;
-	params.camera_center = cameraCenter;
-	params.pixel00_loc = pixel00_loc;
-	params.pixel_delta_v = pixel_delta_v;
-	params.pixel_delta_u = pixel_delta_u;
+
+	// --- 1. Параметры FOV и Аспект ---
+	// Настройте эти значения для вашего угла обзора (FOV)
+	const float focal_length = 1.0f; // Дистанция до плоскости вьюпорта
+	const float vfov_degrees = scene.camera().fov; // Вертикальный угол обзора (например, 70 градусов)
+
+	const float aspect_ratio = (float)scene.width() / (float)scene.height();
+	const float vfov_radians = vfov_degrees * PI / 180.0f;
+
+	const float viewport_height = 2.0f * focal_length * std::tan(vfov_radians / 2.0f);
+	const float viewport_width = viewport_height * aspect_ratio;
+
+	const Vector3 camera_forward = unit_vector(camera.target - cameraCenter);
+	const Vector3 camera_right = unit_vector(cross(camera.up, camera_forward));
+	const Vector3 camera_up = cross(camera_forward, camera_right);
+
+	// --- 3. Расчёт Векторов Вьюпорта ---
+
+	// Полная ширина вьюпорта, направленная по вектору 'right'
+	const Vector3 viewport_u = camera_right * viewport_width;
+	// Полная высота вьюпорта. Инвертируем, чтобы ось Y (V) шла вниз по экрану
+	const Vector3 viewport_v = camera_up * -viewport_height;
+
+	// --- 4. Расчет Шагов Пикселя ---
+	params.pixel_delta_u = viewport_u / (float)scene.width();
+	params.pixel_delta_v = viewport_v / (float)scene.height();
+
+	// --- 5. Расчет Начальной Точки (pixel00_loc) ---
+
+	// Точка, на которую нужно попасть:
+	// Center + Forward*L_f - U/2 + V/2
+	const Vector3 viewport_upper_left = cameraCenter + camera_forward * focal_length - viewport_u / 2.0f - viewport_v / 2.0f;
+
+	// Центр первого пикселя (0,0) - Сдвиг на половину шага U и половину шага V от угла
+	params.pixel00_loc = viewport_upper_left + 0.5f * (params.pixel_delta_u + params.pixel_delta_v);
 
 	params.primitiveCount = scene.count();
 	params.trianglesCount = scene.triangles().size();
@@ -601,7 +607,7 @@ void Render::createSceneSRV(const Scene& scene)
 		{
 			RTMaterial material;
 			material.albedo = mt.albedo;
-			material.emmision = mt.emmision;
+			material.emmision = mt.emission;
 			material.type = mt.type;
 
 			materials.emplace_back(material);
@@ -623,8 +629,7 @@ void Render::createSceneSRV(const Scene& scene)
 		UINT descriptorSize = device_->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		CD3DX12_CPU_DESCRIPTOR_HANDLE srvHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(uavHeap_->GetCPUDescriptorHandleForHeapStart(), 3, descriptorSize);
 		device_->CreateShaderResourceView(sbResource, &srvDesc, srvHandle);
-	}	
-	
+	}
 }
 
 void Render::draw()
@@ -807,21 +812,17 @@ void Render::wait()
 	frameIndex_ = swapChain_->GetCurrentBackBufferIndex();
 }
 
-
-
-void Render::update(const Camera& camera, const Scene& scene, bool isDirty, float dt)
+void Render::update(const Scene& scene, bool isDirty, float dt)
 {
-	updateSceneParam(scene, camera.pos(), dt);
+	updateSceneParam(scene, scene.camera().pos, dt);
 
 	if (isDirty && scene.count() > 0)
 	{
-		// Освобождаем старый буфер
 		scenePrimitives_.release();
 		sceneTriangles_.release();
 		createSceneSRV(scene);
 	}
 }
-
 
 void Render::fini() 
 {
@@ -832,7 +833,3 @@ void Render::fini()
 	wait();
 	CloseHandle(fenceEvent_);
 }
-
-
-
-

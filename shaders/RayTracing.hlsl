@@ -15,23 +15,23 @@ cbuffer SceneConstants : register(b0)
 {
     float3 camera_center;
     float _pad0;
-    
+
     float3 pixel00_loc;
     float _pad1;
     
     float3 pixel_delta_u;
     float _pad2;
-    
+
     float3 pixel_delta_v;
     float _pad3;
-        
+
     uint primitiveCount;
     uint trianglesCount;
     uint sampleCount;
     float _pad5;
-    
+
     float3 enviroment;
-    float frameTime;    
+    float frameTime;
 };
 
 struct Primitive
@@ -226,7 +226,6 @@ float3 randomCosineWeightedVectorHemispher(float2 screenPos, float3 N)
     T = float3(1.0 + sign * N.x * N.x * a, sign * b, -sign * N.x);
     B = float3(b, sign + sign * N.y * N.y * a, -sign * N.y);
     
- 
     return T * x + N * y + B * z;
 }
 
@@ -336,7 +335,6 @@ void CSMain(uint3 dispatchThreadID : SV_DispatchThreadID)
             + ( dispatchThreadID.x + offset_u ) * pixel_delta_u
             + ( dispatchThreadID.y + offset_v ) * pixel_delta_v;
         //Vector3 pixPos = pixel00_loc + Vector3( pixSize / 2.0f + pixel_delta_u * aspectRatio, -pixSize / 2.0f - v, 0.0f );
-                
         Ray ray;
         ray.origin = camera_center;
         ray.direction = normalize(pixel_center - camera_center);

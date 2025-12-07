@@ -53,30 +53,13 @@ struct RTMaterial
 };
 
 
-class Camera
-{
-public:
-	const Vector3& pos() const
-	{
-		return pos_;
-	}
-
-	void setPos( const Vector3& pos )
-	{
-		pos_ = pos;
-	}
-
-private:
-	Vector3 pos_;
-};
-
 class Render
 {
 public:
 	bool init( HWND hwnd, const Scene& scene);
 	void fini();
 
-	void update( const Camera& camera, const Scene& scene, bool isDirty, float dt );
+	void update( const Scene& scene, bool isDirty, float dt );
 	void draw();
 
 private:

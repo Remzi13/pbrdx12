@@ -27,10 +27,8 @@ private:
 	void handleKeyEvent( const InputEvent& event );
 
 private:
-	Camera camera_;
 	Render render_;
 
-	
 	Scene scene_;
 	bool isDirty_{ true };
 

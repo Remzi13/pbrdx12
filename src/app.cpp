@@ -19,10 +19,13 @@ namespace {
 bool App::init( HWND hwnd )
 {
 	hwnd_ = hwnd;
-	camera_.setPos( { 0, 0, 0 } );
+
 	g_lastTime = std::chrono::high_resolution_clock::now();
-	scene_.load( "../pbr/scenes/03-scene-easy.txt" );
+	//scene_.load( "../pbr/scenes/03-scene-easy.txt" );
 	//scene_.load("../pbr/scenes/03-scene-medium.txt");
+	//scene_.load("../pbr/scenes/03-scene-hard.txt");
+	scene_.load( "../pbr/scenes/04-scene-easy.txt" );
+	//scene_.load("../pbr/scenes/04-scene-medium.txt");
 	return render_.init( hwnd, scene_);
 }
 
@@ -51,7 +54,7 @@ void App::update()
 	}
 
 	inputUpdate();
-	render_.update( camera_, scene_, isDirty_, deltaTime );
+	render_.update( scene_, isDirty_, deltaTime );
 	isDirty_ = false;
 	render_.draw();
 }
@@ -109,9 +112,13 @@ void App::handleKeyEvent( const InputEvent& event )
 	case VK_LEFT:
 		if ( pressed )
 		{	
-			const auto pos = camera_.pos();			
-			camera_.setPos( { pos.x() - shift, pos.y(), pos.z() } );
-			std::cout << "Left pressed" << camera_.pos() << "\n";
+			auto camera = scene_.camera();
+			camera.pos[0] -= shift;
+			scene_.setCamera(camera);
+
+			//const auto pos = camera_.pos();
+			//camera_.setPos( { pos.x() - shift, pos.y(), pos.z() } );
+			//std::cout << "Left pressed" << camera_.pos() << "\n";
 		}
 		else
 		{			
@@ -124,9 +131,13 @@ void App::handleKeyEvent( const InputEvent& event )
 	case VK_RIGHT:
 		if ( pressed )
 		{
-			const auto pos = camera_.pos();
-			camera_.setPos( { pos.x() + shift, pos.y(), pos.z() } );
-			std::cout << "Right pressed" << camera_.pos() << "\n"; 
+			auto camera = scene_.camera();
+			camera.pos[0] += shift;
+			scene_.setCamera(camera);
+
+			//const auto pos = camera_.pos();
+			//camera_.setPos( { pos.x() + shift, pos.y(), pos.z() } );
+			//std::cout << "Right pressed" << camera_.pos() << "\n"; 
 		}
 		else
 			std::cout << "Right released\n";
@@ -136,9 +147,15 @@ void App::handleKeyEvent( const InputEvent& event )
 	case VK_UP:
 		if ( pressed )
 		{
-			const auto pos = camera_.pos();
-			camera_.setPos( { pos.x() , pos.y(), pos.z() + shift } );
-			std::cout << "Up pressed\n";
+			auto camera = scene_.camera();
+			camera.pos[2] += shift;
+			camera.target[2] += shift;
+			scene_.setCamera(camera);
+
+			//const auto pos = camera_.pos();
+			// 
+			//camera_.setPos( { pos.x() , pos.y(), pos.z() + shift } );
+			//std::cout << "Up pressed\n";
 		}
 		else
 			std::cout << "Up released\n";
@@ -148,9 +165,14 @@ void App::handleKeyEvent( const InputEvent& event )
 	case VK_DOWN:
 		if ( pressed )
 		{
-			const auto pos = camera_.pos();
-			camera_.setPos( { pos.x() , pos.y(), pos.z() - shift } );
-			std::cout << "Down pressed\n";
+			auto camera = scene_.camera();
+			camera.pos[2] -= shift;
+			camera.target[2] -= shift;
+			scene_.setCamera(camera);
+
+			//const auto pos = scene_.camera().pos;
+			//scene_.camera().pos = { pos.x() , pos.y(), pos.z() - shift };
+			//std::cout << "Down pressed\n";
 		}
 		else
 			std::cout << "Down released\n";

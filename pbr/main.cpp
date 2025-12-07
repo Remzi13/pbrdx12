@@ -441,7 +441,7 @@ int main()
 	const int SIDE_SAMPLE_COUNT = scene.samples();
 	auto start = std::chrono::high_resolution_clock::now();
 
-	TaskManager manager(4, 32);
+	TaskManager manager(8, 32);
 
 	completed_pixels = 0;
 	std::thread progress_thread( display_progress, (int)data.size() );

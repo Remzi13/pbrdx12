@@ -57,6 +57,7 @@ public:
 	
 	void addSphere(const Sphere& sp) { spheres_.push_back(sp); }
 
+	void setCamera(const Camera& camera) { camera_ = camera; }
 	const Camera& camera() const { return camera_; }
 
 	const std::vector<Sphere>& spheres() const { return spheres_; }
