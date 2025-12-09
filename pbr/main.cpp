@@ -156,11 +156,11 @@ Vector3 reflect(const Vector3& d, const Vector3& n)
 
 Vector3 trace( const math::Ray& ray, const Scene& scene, int depth )
 {
-	const float tMin = 0.001f;
+	const float tMin = 0.01f;
 	float tMax = 10000;
 	Vector3 hitNormal;
 	
-	int matIndex = 0;
+	int matIndex = -1;
 	for ( const auto& sp : scene.spheres() )
 	{
 		float t = intersectSphere( ray, sp.pos, sp.radius, tMin, tMax );
@@ -201,59 +201,51 @@ Vector3 trace( const math::Ray& ray, const Scene& scene, int depth )
 		tMax = t;
 		matIndex = tr.matIndex;
 	}
-	if ( tMax == 10000 )
+	if ( tMax == 10000 || matIndex == -1 )
 		return scene.enviroment();
 
 	if ( dot( hitNormal, ray.direction ) > 0.0 )
 		hitNormal = -hitNormal;
 
 	const Material m = scene.materials()[ matIndex ];
-	Vector3 newDir;
-	float brdf = 1.0f / PI;
-	float pdf = 1.0f / ( 2.0f * PI );
-	float cosTheta; 
+
+	//float probToContinue = 0.5;// std::min(0.9f, std::max( 1e-3f, std::max( m.albedo.x(), std::max( m.albedo.y(), m.albedo.z() ) )));
+	const float probToContinue =std::max( m.albedo.x(), std::max( m.albedo.y(), m.albedo.z() ) );	
+	const int maxDepth = 5;
+	if ( depth > maxDepth && (randFloat( 0, 1 ) > probToContinue ))
+		return m.emission;
+
+	Vector3 color;
 
 	if ( m.type == 0 )
 	{
-		newDir = randomUniformVectorHemispher();
-		cosTheta = dot(newDir, hitNormal);
-		if (cosTheta < 0.0)
+		auto newDir = randomUniformVectorHemispher();
+		float cosTheta = dot(newDir, hitNormal);
+		if ( cosTheta < 0.0 )
+		{
 			newDir *= -1;
+			cosTheta *= -1;
+		}
+		const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4f;	
+		const math::Ray newRay( {newOrig, newDir } );
+
+		float brdf = 1.0 / PI;
+		float pdf = 1.0 / ( 2.0 * PI );
+
+		color = trace( newRay, scene, depth + 1 ) * brdf *  cosTheta / pdf * m.albedo + m.emission;
 	}
 	else if ( m.type == 1 )
 	{
-		newDir = reflect( ray.direction, hitNormal );
-		cosTheta = 1.0f;
-		brdf = 1.0f;
-		pdf = 1.0f;
+		auto newDir = reflect( ray.direction, hitNormal );
+		const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4f;
+		const math::Ray newRay( { newOrig, newDir } );
+		color = trace( newRay, scene, depth + 1 ) * m.albedo + m.emission;
 	}
+	if ( depth > maxDepth  )
+		return color * (1.0 / probToContinue);
 	
-	//const Vector3 newDir = randOnHemispher( hitNormal );
-	
-	const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4f;	
-	const math::Ray newRay( {newOrig, newDir } );
-	
-	Vector3 color;
-	if (depth > 4)
-	{
-		color = scene.enviroment();
-		//float p = randFloat( 0, 1 );
-		//if ( p <= 0.5 )
-		//{
-		//	color = m.emmision;
-		//}
-		//else
-		//{
-		//	color = trace( newRay, scene, depth + 1 ) * brdf * std::abs( cosTheta ) / pdf * m.albedo + m.emmision;
-		//	color *= 1.0f / ( 1.0f - p );
-		//}
-	}
-	else
-	{
-		color = trace( newRay, scene, depth + 1 ) * brdf * std::abs( cosTheta ) / pdf * m.albedo + m.emission;
-	}
-
 	return color;
+
 }
 
 Vector3 trace_iterative( math::Ray ray, const Scene& scene, int maxDepth)
@@ -384,11 +376,8 @@ void display_progress( int total_pixels ) {
 int main()
 {
 	Scene scene;
-	//scene.load( "../scenes/02-scene-hard-v2.txt" );
-	//scene.load( "../scenes/03-scene-hard.txt" );
-	//scene.load( "../scenes/03-scene-easy.txt" );
-	//scene.load( "../scenes/04-scene-easy.txt" );
-	scene.load( "../scenes/04-scene-medium.txt" );
+	scene.load( "../scenes/04-scene-easy.txt" );
+	//scene.load( "../scenes/04-scene-medium.txt" );
 	//scene.load("../scenes/04-scene-hard.txt");
 
 	const std::uint16_t width = scene.width();
@@ -411,7 +400,7 @@ int main()
 	const int SIDE_SAMPLE_COUNT = scene.samples();
 	auto start = std::chrono::high_resolution_clock::now();
 
-	TaskManager manager(8, 128);
+	TaskManager manager(8, 32);
 
 	completed_pixels = 0;
 	std::thread progress_thread( display_progress, (int)data.size() );
