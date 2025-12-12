@@ -15,6 +15,8 @@ set(SRC
     ../src/concurrency.cpp
     ../src/bvh.h
     ../src/bvh.cpp
+    ../src/brdf.h
+    ../src/brdf.cpp
     main.cpp
 )
 add_executable(pbr ${SRC})

@@ -4,6 +4,63 @@
 #include <ostream>
 #include <algorithm>
 
+class Vector2 {
+public:
+	float d[2];
+
+	Vector2( float x, float y ) : d{ x, y } {}
+
+	float x() const { return d[0]; }
+	float y() const { return d[1]; }
+
+	Vector2 operator-() const { return Vector2( -d[0], -d[1]); }
+	float operator[]( int i ) const { return d[i]; }
+	float& operator[]( int i ) { return d[i]; }
+
+	Vector2& operator+=( const Vector2& v ) {
+		d[0] += v.d[0];
+		d[1] += v.d[1];
+		return *this;
+	}
+	Vector2& operator-=( const Vector2& u ) {
+		d[0] -= u[0];
+		d[1] -= u[1];
+		return *this;
+	}
+
+	Vector2& operator*=( float t ) {
+		d[0] *= t;
+		d[1] *= t;
+
+		return *this;
+	}
+
+	bool operator==( const Vector2& u )
+	{
+		return d[0] == u[0] && d[1] == u[1] && d[2] == u[2];
+	}
+
+	Vector2& operator/=( float t ) {
+		return *this *= 1 / t;
+	}
+};
+
+inline Vector2 operator*( float t, const Vector2& v ) {
+	return Vector2( t * v.d[0], t * v.d[1]);
+}
+
+inline Vector2 operator+( float t, const Vector2& v ) {
+	return Vector2( t + v.d[0], t + v.d[1] );
+}
+
+inline Vector2 operator*( const Vector2& v, float t ) {
+	return t * v;
+}
+
+inline Vector2 operator/( const Vector2& v, float t ) {
+	return ( 1 / t ) * v;
+}
+
 class Vector3 {
 public:
 	float d[3];
@@ -85,6 +142,10 @@ inline Vector3 operator/(const Vector3& u, const Vector3& v) {
 
 inline Vector3 operator*( float t, const Vector3& v ) {
 	return Vector3( t * v.d[0], t * v.d[1], t * v.d[2] );
+}
+
+inline Vector3 operator-( float t, const Vector3& v ) {
+	return Vector3( t - v.d[0] , t - v.d[1], t - v.d[2] );
 }
 
 inline Vector3 operator*( const Vector3& v, float t ) {

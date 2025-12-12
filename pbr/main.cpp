@@ -10,6 +10,7 @@
 #include "../src/scene.h"
 #include "../src/concurrency.h"
 #include "../src/utils.h"
+#include "../src/brdf.h"
 
 
 float srgb( float x )
@@ -156,7 +157,7 @@ Vector3 reflect(const Vector3& d, const Vector3& n)
 
 Vector3 trace( const math::Ray& ray, const Scene& scene, int depth )
 {
-	const float tMin = 0.01f;
+	const float tMin = 0.1f;
 	float tMax = 10000;
 	Vector3 hitNormal;
 	
@@ -229,10 +230,16 @@ Vector3 trace( const math::Ray& ray, const Scene& scene, int depth )
 		const Vector3 newOrig = ray.origin + ray.direction * tMax + newDir * 1e-4f;	
 		const math::Ray newRay( {newOrig, newDir } );
 
-		float brdf = 1.0 / PI;
-		float pdf = 1.0 / ( 2.0 * PI );
+		//float brdf = 1.0f / PI;
+		//float pdf = 1.0f / ( 2.0f * PI );
+		const Vector3 L = newDir;
+		const Vector3 V = ray.direction * -1.0f;
+		const Vector3 H = unit_vector( ( L + V ) * 0.5f );
+		const Vector3 N = hitNormal;
+		auto brdf = BRDF( m.albedo, m.metallic, m.roughness, L, H, N, V );
+		float pdf = 1.0f / ( 2.0f * PI );
 
-		color = trace( newRay, scene, depth + 1 ) * brdf *  cosTheta / pdf * m.albedo + m.emission;
+		color = trace( newRay, scene, depth + 1 ) * brdf *  cosTheta / pdf + m.emission;
 	}
 	else if ( m.type == 1 )
 	{
@@ -242,7 +249,7 @@ Vector3 trace( const math::Ray& ray, const Scene& scene, int depth )
 		color = trace( newRay, scene, depth + 1 ) * m.albedo + m.emission;
 	}
 	if ( depth > maxDepth  )
-		return color * (1.0 / probToContinue);
+		return color * (1.0f / probToContinue);
 	
 	return color;
 
@@ -376,9 +383,10 @@ void display_progress( int total_pixels ) {
 int main()
 {
 	Scene scene;
-	scene.load( "../scenes/04-scene-easy.txt" );
+	//scene.load( "../scenes/04-scene-easy.txt" );
 	//scene.load( "../scenes/04-scene-medium.txt" );
 	//scene.load("../scenes/04-scene-hard.txt");
+	scene.load( "../scenes/06-scene-easy.txt" );
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();

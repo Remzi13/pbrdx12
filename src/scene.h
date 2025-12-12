@@ -26,6 +26,8 @@ struct Material
 	Vector3 albedo;
 	Vector3 emission;
 	int type;
+	float metallic;
+	float roughness;
 };
 
 struct Camera

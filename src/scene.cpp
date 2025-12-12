@@ -73,13 +73,15 @@ void Scene::parse( const std::string& filename ) {
 	for ( int i = 0; i < numMat; ++i ) {
 		ss = getNextDataLine( file );
 		
-		float r1, g1, b1, r2, g2, b2;
+		float r1, g1, b1, r2, g2, b2, m, r;
 		int type;
-		ss >> r1 >> g1 >> b1 >> r2 >> g2 >> b2 >> type;
+		ss >> r1 >> g1 >> b1 >> r2 >> g2 >> b2 >> type >> m >> r;
 		Material mat;
 		mat.albedo = Vector3( r1, g1, b1 );
 		mat.emission = Vector3( r2, g2, b2 );
 		mat.type = type;
+		mat.roughness = r;
+		mat.metallic = m;
 		materials_.push_back( mat );
 	}
 
