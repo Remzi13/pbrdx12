@@ -92,7 +92,7 @@ void Scene::parse( const std::string& filename ) {
 
 	for ( int i = 0; i < numSpheres; ++i ) {
 		ss = getNextDataLine( file );
-		Sphere sphere;
+		math::Sphere sphere;
 		float x, y, z, rad, matIndex;
 		ss >> x >> y >> z >> rad >> matIndex;
 		sphere.pos = Vector3( x, y, z );
@@ -101,6 +101,7 @@ void Scene::parse( const std::string& filename ) {
 
 		spheres_.push_back( sphere );
 	}
+	bvhSphere_.build(spheres_);
 
 	// 3. Читаем Плоскости
 	ss = getNextDataLine( file );
@@ -147,4 +148,9 @@ void Scene::parse( const std::string& filename ) {
 float Scene::intersect(const math::Ray& ray, float tMin, float tMax, math::Triangle& tr) const
 {
 	return bvh_.intersect(ray, tMin, tMax, tr);
+}
+
+float Scene::intersect(const math::Ray& ray, float tMin, float tMax, math::Sphere& sp) const
+{
+	return bvhSphere_.intersect(ray, tMin, tMax, sp);
 }

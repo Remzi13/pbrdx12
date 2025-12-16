@@ -77,10 +77,8 @@ Vector3 BRDF(const Vector3& inputAlbedo, float metallic, float roughness, const 
 
 	const float GGXalpha = roughness * roughness;
 
-	Vector3 diffuse = DiffuseBurley(albedo, roughness, NdotV, NdotL, LdotH);
-	diffuse = diffuse;
-
-	Vector3 specular = NDF(NdotH, GGXalpha) * VF(NdotL, NdotV, GGXalpha) * FresnelSchlick(specColor, LdotH);
+	const Vector3 diffuse = DiffuseBurley(albedo, roughness, NdotV, NdotL, LdotH);
+	const Vector3 specular = NDF(NdotH, GGXalpha) * VF(NdotL, NdotV, GGXalpha) * FresnelSchlick(specColor, LdotH);
 
 	return diffuse + specular;
 }

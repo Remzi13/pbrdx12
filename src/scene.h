@@ -6,20 +6,12 @@
 
 #include <vector>
 
-struct Sphere
-{
-	Vector3 pos;
-	float radius;
-	int matIndex;
-};
-
 struct Plane
 {
 	Vector3 normal;	
 	float dist;
 	int matIndex;
 };
-
 
 struct Material
 {
@@ -52,12 +44,12 @@ public:
 	int height() const { return height_; }
 	Vector3 enviroment() const { return enviroment_; }
 	
-	void addSphere(const Sphere& sp) { spheres_.push_back(sp); }
+	void addSphere(const math::Sphere& sp) { spheres_.push_back(sp); }
 
 	void setCamera(const Camera& camera) { camera_ = camera; }
 	const Camera& camera() const { return camera_; }
 
-	const std::vector<Sphere>& spheres() const { return spheres_; }
+	const std::vector<math::Sphere>& spheres() const { return spheres_; }
 	const std::vector<Plane>& planes() const { return planes_; }
 	const std::vector<math::Triangle>& triangles() const { return triangles_; }
 	const std::vector<Material>& materials() const { return materials_; }
@@ -65,6 +57,7 @@ public:
 	size_t count() const { return spheres_.size() + planes_.size(); }
 
 	float intersect(const math::Ray& ray, float tMin, float tMax, math::Triangle& tr) const;
+	float intersect(const math::Ray& ray, float tMin, float tMax, math::Sphere& sp) const;
 
 private:
 	void parse( const std::string& filename );	
@@ -77,9 +70,10 @@ private:
 	Camera camera_;
 	Vector3 enviroment_;
 	std::vector<Material> materials_;
-	std::vector<Sphere> spheres_;
+	std::vector<math::Sphere> spheres_;
 	std::vector<Plane> planes_;
 	std::vector<math::Triangle> triangles_;
 
-	BVH bvh_;
+	BVH<math::Triangle> bvh_;
+	BVH<math::Sphere> bvhSphere_;
 };

@@ -87,22 +87,7 @@ float intersectPlane( const math::Ray& ray,  Vector3 poinOnPlane, Vector3 normPl
 }
 
 
-float intersectSphere(const math::Ray& ray, const Vector3& center, float radius, float tMin, float tMax)
-{
-	const Vector3 origin = ray.origin - center; // сдвигаем сферу в центр 
-	const float A = 1;
-	const float B = 2.0f * dot( origin, ray.direction );
-	const float C = dot( origin, origin ) - radius * radius;
-	const float D = B * B - 4 * A * C;
-	if ( D < 0.0f )
-		return tMax;
-	const float sqrtD = std::sqrt( D );
-	const float t0 = ( -B - sqrtD ) / ( 2.0f * A );	
-	if ( t0 >= tMin && t0 < tMax ) return t0;
-	const float t1 = (-B + sqrtD) / (2.0f * A);
-	if ( t1 >= tMin && t1 < tMax ) return t1;
-	return tMax;
-}
+
 
 //Vector3 getUniformSampleOffset( int index, int side_count )
 //{
@@ -162,16 +147,25 @@ Vector3 trace( const math::Ray& ray, const Scene& scene, int depth )
 	Vector3 hitNormal;
 	
 	int matIndex = -1;
-	for ( const auto& sp : scene.spheres() )
+	//for ( const auto& sp : scene.spheres() )
+	//{
+	//	float t = intersectSphere( ray, sp.pos, sp.radius, tMin, tMax );
+	//	if ( t < tMax )
+	//	{
+	//		Vector3 pos = ray.origin + ray.direction * t;
+	//		hitNormal = unit_vector( pos - sp.pos );
+	//		tMax = t;
+	//		matIndex = sp.matIndex;
+	//	}
+	//}
+	math::Sphere sp;
+	float spt = scene.intersect(ray, tMin, tMax, sp);
+	if (spt < tMax)
 	{
-		float t = intersectSphere( ray, sp.pos, sp.radius, tMin, tMax );
-		if ( t < tMax )
-		{
-			Vector3 pos = ray.origin + ray.direction * t;
-			hitNormal = unit_vector( pos - sp.pos );
-			tMax = t;
-			matIndex = sp.matIndex;
-		}
+		Vector3 pos = ray.origin + ray.direction * spt;
+		hitNormal = unit_vector(pos - sp.pos);
+		tMax = spt;
+		matIndex = sp.matIndex;
 	}
 
 	for ( const auto& p : scene.planes() )
@@ -272,7 +266,7 @@ Vector3 trace_iterative( math::Ray ray, const Scene& scene, int maxDepth)
 		
 		for (const auto& sp : scene.spheres())
 		{
-			t = intersectSphere(ray, sp.pos, sp.radius, tMin, tMax);
+			t = math::intersect(ray, sp, tMin, tMax);
 			if (t < tMax)
 			{
 				Vector3 pos = ray.origin + ray.direction * t;
@@ -295,7 +289,7 @@ Vector3 trace_iterative( math::Ray ray, const Scene& scene, int maxDepth)
 
 		for (const auto& tr : scene.triangles())
 		{
-			t = intersectTriangle(ray, tr.a, tr.b, tr.c, tMin, tMax);
+			t = math::intersect(ray, tr, tMin, tMax);
 			if (t < tMax)
 			{
 				hitNormal = unit_vector(cross(tr.b - tr.a, tr.c - tr.a));
@@ -386,7 +380,8 @@ int main()
 	//scene.load( "../scenes/04-scene-easy.txt" );
 	//scene.load( "../scenes/04-scene-medium.txt" );
 	//scene.load("../scenes/04-scene-hard.txt");
-	scene.load( "../scenes/06-scene-easy.txt" );
+	//scene.load( "../scenes/06-scene-easy.txt" );
+	scene.load("../scenes/06-scene-medium.txt");
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
