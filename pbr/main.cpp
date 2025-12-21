@@ -11,7 +11,7 @@
 #include "../src/concurrency.h"
 #include "../src/utils.h"
 #include "../src/brdf.h"
-
+#include "../src/scene2.h"
 
 float srgb( float x )
 {
@@ -376,12 +376,19 @@ void display_progress( int total_pixels ) {
 
 int main()
 {
+	Scene2 scene2;
+	scene2.parse("../scenes/test.glft");
+
+	return 0;
+
 	Scene scene;
 	//scene.load( "../scenes/04-scene-easy.txt" );
 	//scene.load( "../scenes/04-scene-medium.txt" );
 	//scene.load("../scenes/04-scene-hard.txt");
 	//scene.load( "../scenes/06-scene-easy.txt" );
 	scene.load("../scenes/06-scene-medium.txt");
+
+	
 
 	const std::uint16_t width = scene.width();
 	const std::uint16_t height = scene.height();
