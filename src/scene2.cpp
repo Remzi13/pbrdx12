@@ -12,6 +12,7 @@
 #include <iosfwd>
 #include <fstream>
 #include <sstream>
+#include <map>
 
 #include "vector.h"
 
@@ -229,7 +230,17 @@ namespace {
 			float roughnessFactor;
 		};
 
-		
+		struct Mesh
+		{
+			struct Primitive {
+				size_t material;
+				size_t indices;
+				std::map<std::string, size_t> attributes;
+			};
+			std::string name;
+			std::vector<Primitive> primitives;
+		};
+
 
 	public:
 		struct SceneFile {
@@ -238,6 +249,7 @@ namespace {
 			std::vector<Node> nodes;
 			std::vector<Camera> cameras;
 			std::vector<Material> materials;
+			std::vector<Mesh> meshes;
 		};
 
 	public:
@@ -264,6 +276,8 @@ namespace {
 					parseCameras(file.cameras);
 				else if (key == "materials")
 					parseMaterials(file.materials);
+				else if (key == "meshes")
+					parseMeshes(file.meshes);
 				else
 					skipValue();
 
@@ -373,6 +387,22 @@ namespace {
 			};
 			expect(TokenType::RBracket);
 			return q;
+		}
+
+		std::map<std::string, size_t> parseMap()
+		{
+			std::map<std::string, size_t> m;
+			expect(TokenType::LBrace);
+			while (!match(TokenType::RBrace)) {
+				
+				std::string key = consumeString();
+				expect(TokenType::Colon);
+				size_t value = consumeInt();
+				m.emplace(key, value);
+				match(TokenType::Comma);
+			}
+			
+			return m;
 		}
 
 		Node parseNode() 
@@ -582,6 +612,68 @@ namespace {
 			}
 		}
 
+		Mesh::Primitive parsePrimitive()
+		{
+			Mesh::Primitive p;
+			expect(TokenType::LBrace);
+
+			while (!match(TokenType::RBrace)) {
+				std::string key = consumeString();
+				expect(TokenType::Colon);
+
+				if (key == "attributes")
+					p.attributes = parseMap();
+				else if (key == "indices")
+					p.indices = consumeInt();
+				else if (key == "material")
+					p.material = consumeInt();
+
+				match(TokenType::Comma);
+			}
+			return p;
+		}
+
+		std::vector<Mesh::Primitive> parsePrimitives()
+		{
+			std::vector<Mesh::Primitive> p;
+			expect(TokenType::LBracket);
+			while (!match(TokenType::RBracket)) {
+				p.push_back(parsePrimitive());
+				match(TokenType::Comma);
+			}
+			return p;
+		}
+
+		Mesh parseMesh()
+		{
+			Mesh m;
+			expect(TokenType::LBrace);
+
+			while (!match(TokenType::RBrace)) {
+				std::string key = consumeString();
+				expect(TokenType::Colon);
+
+				if (key == "name")
+					m.name = consumeString();
+				else if (key == "primitives")
+					m.primitives = parsePrimitives();
+				else
+					skipValue();
+
+				match(TokenType::Comma);
+			}
+			return m;
+		}
+
+		void parseMeshes(std::vector<Mesh>& meshes)
+		{
+			expect(TokenType::LBracket);
+			while (!match(TokenType::RBracket)) {
+				meshes.push_back(parseMesh());
+				match(TokenType::Comma);
+			}
+		}
+
 		void error(const char* msg)
 		{
 
@@ -620,6 +712,7 @@ bool Scene2::parse(const char* fileName)
 	std::cout << "Nodes: " << scene.nodes.size() << "\n";
 	std::cout << "Cameras: " << scene.cameras.size() << "\n";
 	std::cout << "Materials: " << scene.materials.size() << "\n";
+	std::cout << "Meshes: " << scene.meshes.size() << "\n";
 
 
 	return false;
