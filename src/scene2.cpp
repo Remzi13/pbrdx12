@@ -13,6 +13,8 @@
 #include <fstream>
 #include <sstream>
 
+#include "vector.h"
+
 namespace {
 	enum class TokenType {
 		LBrace,		// {
@@ -23,6 +25,7 @@ namespace {
 		Comma,		// ,
 		String,
 		Number,
+		Bool,
 		End
 	};
 
@@ -62,6 +65,8 @@ namespace {
 			default:
 				if (std::isdigit(c) || c == '-')
 					return number();
+				else
+					return boolean();
 			}
 			error("unexpect character");
 			return { TokenType::End, "", _line, _column };
@@ -126,6 +131,23 @@ namespace {
 			return { TokenType::String, text, startLine, startCol };		
 		}
 
+		Token boolean()
+		{
+			size_t startLine = _line;
+			size_t startCol = _column;
+			size_t start = _pos;
+
+			while (_pos < _input.size() && std::isalpha(_input[_pos]))
+				advance();
+
+			return {
+				TokenType::Bool,
+				_input.substr(start, _pos - start),
+				startLine,
+				startCol
+			};
+		}
+
 		Token number()
 		{
 			size_t startLine = _line;
@@ -176,18 +198,13 @@ namespace {
 		size_t _column = 1;
 	};
 
-	
 
 	class Parser {
 		struct Node {
 			std::string name;
 			std::optional<int> camera;
-			std::array<float, 3> translation{ 0,0,0 };
-			std::array<float, 4> rotation{ 0,0,0,1 };
-		};
-
-		struct Scene {
-			std::vector<int> nodes;
+			Vector3 translation{ 0,0,0 };
+			Vector4 rotation{ 0,0,0,1 };
 		};
 
 		struct Camera {
@@ -198,12 +215,29 @@ namespace {
 			float zfar = 100.0f;
 		};
 
+		struct Scene {
+			std::vector<int> nodes;
+		};
+
+		struct Material
+		{
+			std::string name;
+			Vector3 emissiveFactor;
+			float emissiveStrength;
+			Vector4 baseColorFactor;
+			float metallicFactor;
+			float roughnessFactor;
+		};
+
+		
+
 	public:
 		struct SceneFile {
 			int defaultScene = 0;
 			std::vector<Scene> scenes;
 			std::vector<Node> nodes;
 			std::vector<Camera> cameras;
+			std::vector<Material> materials;
 		};
 
 	public:
@@ -228,6 +262,8 @@ namespace {
 					parseNodes(file.nodes);
 				else if (key == "cameras")
 					parseCameras(file.cameras);
+				else if (key == "materials")
+					parseMaterials(file.materials);
 				else
 					skipValue();
 
@@ -315,10 +351,10 @@ namespace {
 			return v;
 		}
 
-		std::array<float, 3> parseVec3() 
+		Vector3 parseVec3() 
 		{
 			expect(TokenType::LBracket);
-			std::array<float, 3> v{
+			Vector3 v{
 				consumeFloat(),
 				(expect(TokenType::Comma), consumeFloat()),
 				(expect(TokenType::Comma), consumeFloat())
@@ -327,9 +363,9 @@ namespace {
 			return v;
 		}
 
-		std::array<float, 4> parseQuat() {
+		Vector4 parseQuat() {
 			expect(TokenType::LBracket);
-			std::array<float, 4> q{
+			Vector4 q{
 				consumeFloat(),
 				(expect(TokenType::Comma), consumeFloat()),
 				(expect(TokenType::Comma), consumeFloat()),
@@ -465,7 +501,86 @@ namespace {
 			}
 		}
 
+		void parseExtensions(Material& m)
+		{
+			expect(TokenType::LBrace);
 
+			while (!match(TokenType::RBrace)) {
+				std::string key = consumeString();
+				if (key == "KHR_materials_emissive_strength")
+				{
+					expect(TokenType::LBrace);
+					while (!match(TokenType::RBrace)) {
+						std::string key = consumeString();
+						expect(TokenType::Colon);
+
+						if (key == "emissiveStrength")
+						{
+							m.emissiveStrength = consumeFloat();
+						}
+						match(TokenType::Comma);
+					}
+				}
+				match(TokenType::Comma);
+			}
+		}
+
+		void parsePbrMetallicRoughness(Material& m)
+		{
+			expect(TokenType::LBrace);
+
+			while (!match(TokenType::RBrace)) {
+				std::string key = consumeString();
+				expect(TokenType::Colon);
+
+				if (key == "baseColorFactor")
+					m.baseColorFactor = parseQuat();
+				else if (key == "metallicFactor")
+					m.metallicFactor = consumeFloat();
+				else if (key == "roughnessFactor")
+					m.roughnessFactor = consumeFloat();
+				else
+					skipValue();
+
+				match(TokenType::Comma);
+			}
+		}
+
+		Material parseMaterial()
+		{
+			Material m;
+			expect(TokenType::LBrace);
+
+			while (!match(TokenType::RBrace)) {
+				std::string key = consumeString();
+				expect(TokenType::Colon);
+
+				if (key == "emissiveFactor")
+					m.emissiveFactor = parseVec3();
+				else if (key == "name")
+					m.name = consumeString();
+				else if (key == "pbrMetallicRoughness")
+					parsePbrMetallicRoughness(m);
+				else if (key == "extensions")
+					parseExtensions(m);
+				else if (key == "doubleSided")
+					bool doubleSided = consumeString() == "true";
+				else
+					skipValue();
+
+				match(TokenType::Comma);
+			}
+			return m;
+		}
+
+		void parseMaterials(std::vector<Material>& materials)
+		{
+			expect(TokenType::LBracket);
+			while (!match(TokenType::RBracket)) {
+				materials.push_back(parseMaterial());
+				match(TokenType::Comma);
+			}
+		}
 
 		void error(const char* msg)
 		{
@@ -504,6 +619,7 @@ bool Scene2::parse(const char* fileName)
 
 	std::cout << "Nodes: " << scene.nodes.size() << "\n";
 	std::cout << "Cameras: " << scene.cameras.size() << "\n";
+	std::cout << "Materials: " << scene.materials.size() << "\n";
 
 
 	return false;
