@@ -1,8 +1,6 @@
 #pragma once
 
-
-class Scene2
+namespace gltf
 {
-public:
 	bool parse(const char* name);
-};
+}

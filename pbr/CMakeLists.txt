@@ -17,8 +17,8 @@ set(SRC
     ../src/bvh.cpp
     ../src/brdf.h
     ../src/brdf.cpp
-    ../src/scene2.h
-    ../src/scene2.cpp
+    ../src/gltf.h
+    ../src/gltf.cpp
     main.cpp
 )
 add_executable(pbr ${SRC})
