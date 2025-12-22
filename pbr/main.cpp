@@ -377,7 +377,8 @@ void display_progress( int total_pixels ) {
 int main()
 {
 	Scene2 scene2;
-	scene2.parse("../scenes/test.glft");
+	//scene2.parse("../scenes/test.glft");
+	scene2.parse("../scenes/07-scene-easy.gltf");
 
 	return 0;
 
