@@ -376,7 +376,8 @@ void display_progress( int total_pixels ) {
 
 int main()
 {
-	gltf::parse("../scenes/07-scene-easy.gltf");
+	Scene2 scene2;
+	gltf::parse("../scenes/07-scene-easy.gltf", scene2);
 
 	return 0;
 

@@ -77,3 +77,33 @@ private:
 	BVH<math::Triangle> bvh_;
 	BVH<math::Sphere> bvhSphere_;
 };
+
+struct Primitive
+{
+	size_t matIndex;
+	std::vector<int> indices;
+	std::vector<Vector3> positions;
+};
+
+struct Mesh
+{
+	std::string name;
+	std::vector<Primitive> primitives;
+};
+
+class Scene2
+{
+	struct Node
+	{
+		std::string name;
+		Vector3 transition;
+		Mesh mesh;
+	};
+
+public:
+	void addNode(const std::string& name, const Vector3& transition, const Mesh& mesh);
+
+private:
+	std::vector<Node> nodes_;
+
+};

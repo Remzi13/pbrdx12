@@ -14,10 +14,32 @@
 #include <sstream>
 #include <map>
 #include <variant>
+#include <assert.h>
 
 #include "vector.h"
 
 namespace {
+
+	struct BufferView
+	{
+		size_t buffer;
+		size_t byteLength;
+		size_t byteOffset;
+		size_t target;
+		size_t byteStride;
+	};
+
+	struct Accessor
+	{
+		size_t bufferView;
+		size_t byteOffset;
+		size_t componentType;
+		size_t count;
+		Vector3 max;
+		Vector3 min;
+		std::string type;
+	};
+
 	enum class TokenType {
 		LBrace,		// {
 		RBrace,		// }
@@ -205,6 +227,7 @@ namespace {
 		struct Node {
 			std::string name;
 			std::optional<int> camera;
+			std::optional<int> mesh;
 			Vector3 translation{ 0,0,0 };
 			Vector4 rotation{ 0,0,0,1 };
 		};
@@ -243,23 +266,6 @@ namespace {
 			std::vector<Primitive> primitives;
 		};
 
-		struct Accessor
-		{
-			size_t bufferView;
-			size_t componentType;
-			size_t count;
-			Vector3 max;
-			Vector3 min;
-			std::string type;
-		};
-
-		struct BufferView
-		{
-			size_t buffer;
-			size_t byteLength;
-			size_t byteOffset;
-			size_t target;
-		};
 
 		struct Buffer
 		{
@@ -604,6 +610,10 @@ namespace {
 				{
 					n.camera = (int)el.getAs<float>("camera");
 				}
+				if (el.has("mesh"))
+				{
+					n.mesh = (int)el.getAs<float>("mesh");
+				}
 				n.rotation = el.getAs<Vector4>("rotation");
 				n.translation = el.getAs<Vector3>("translation");
 
@@ -638,6 +648,7 @@ namespace {
 				accessor.max = el.getAs<Vector3>("max");
 				accessor.min = el.getAs<Vector3>("min");
 				accessor.type = el.getAs<std::string>("type");
+				accessor.byteOffset = (int)el.getAs<float>("byteOffset");
 
 				accessors.push_back(accessor);
 			}
@@ -653,6 +664,7 @@ namespace {
 				bf.byteLength = (int)el.getAs<float>("byteLength");
 				bf.byteOffset = (int)el.getAs<float>("byteOffset");
 				bf.target = (int)el.getAs<float>("target");
+				bf.byteStride = (int)el.getAs<float>("byteStride", 0.0f);
 				bufferViews.push_back(bf);
 			}
 		}
@@ -678,11 +690,157 @@ namespace {
 		Lexer& _lexer;
 		Token _token;
 	};
+
+
+	enum class GltfComponentType : uint32_t
+	{
+		BYTE = 5120,
+		UNSIGNED_BYTE = 5121,
+		SHORT = 5122,
+		UNSIGNED_SHORT = 5123,
+		UNSIGNED_INT = 5125,
+		FLOAT = 5126
+	};
+
+	void writeGltfComponent( GltfComponentType type, const void* in, void* out)
+	{
+		switch (type)
+		{
+		case GltfComponentType::BYTE:			*reinterpret_cast<int8_t*>(out)		=	*reinterpret_cast<const int8_t*>(in);	break;
+		case GltfComponentType::UNSIGNED_BYTE:	*reinterpret_cast<uint8_t*>(out)	=	*reinterpret_cast<const uint8_t*>(in);	break;
+		case GltfComponentType::SHORT:			*reinterpret_cast<int16_t*>(out)	=	*reinterpret_cast<const int16_t*>(in);	break;
+		case GltfComponentType::UNSIGNED_SHORT:	*reinterpret_cast<uint16_t*>(out)	=	*reinterpret_cast<const uint16_t*>(in);	break;
+		case GltfComponentType::UNSIGNED_INT:	*reinterpret_cast<uint32_t*>(out)	=	*reinterpret_cast<const uint32_t*>(in);	break;
+		case GltfComponentType::FLOAT:			*reinterpret_cast<float*>(out)		=	*reinterpret_cast<const float*>(in);	break;
+		default:
+			assert(false && "Unknown glTF component type");
+		}
+	}
+
+	enum class GltfType
+	{
+		SCALAR,
+		VEC2,
+		VEC3,
+		VEC4,
+		MAT2,
+		MAT3,
+		MAT4
+	};
+
+	class GltfBin
+	{
+	public:
+		GltfBin() = default;
+
+		bool loadFromFile(const std::string& path)
+		{
+			std::ifstream file(path, std::ios::binary | std::ios::ate);
+			if (!file)
+				return false;
+
+			const std::streamsize fileSize = file.tellg();
+			file.seekg(0, std::ios::beg);
+
+			data_.resize(static_cast<size_t>(fileSize));
+			if (!file.read(reinterpret_cast<char*>(data_.data()), fileSize))
+				return false;
+
+			return true;
+
+		}
+
+		const uint8_t* data() const { return data_.data(); }
+		size_t size() const { return data_.size(); }
+
+		template<typename T>
+		const T* read(size_t byteOffset) const
+		{
+			assert(byteOffset + sizeof(T) <= data_.size());
+			return reinterpret_cast<const T*>(data_.data() + byteOffset);
+		}
+
+
+		template<typename T>
+		const T* readArray(size_t byteOffset, size_t count) const
+		{
+			assert(byteOffset + sizeof(T) * count <= data_.size());
+			return reinterpret_cast<const T*>(data_.data() + byteOffset);
+		}
+
+	private:
+		std::vector<uint8_t> data_;
+	};
+
+	struct AccessorView
+	{
+		const uint8_t* data = nullptr;
+		size_t stride = 0;
+		size_t elementSize = 0;
+		size_t count = 0;
+	};
+
+	inline size_t componentSize(GltfComponentType t)
+	{
+		switch (t)
+		{
+		case GltfComponentType::BYTE:
+		case GltfComponentType::UNSIGNED_BYTE:  return 1;
+		case GltfComponentType::SHORT:
+		case GltfComponentType::UNSIGNED_SHORT: return 2;
+		case GltfComponentType::UNSIGNED_INT:
+		case GltfComponentType::FLOAT:          return 4;
+		}
+		return 0;
+	}
+
+	inline size_t typeComponentCount(const std::string& t)
+	{
+		if (t == "SCALAR")	return 1;
+		if (t == "VEC2")	return 2;
+		if (t == "VEC3")	return 3;
+		if (t == "VEC4")	return 4;
+		if (t == "MAT2")	return 4;
+		if (t == "MAT3")	return 9;
+		if (t == "MAT4")	return 16;
+
+		return 0;
+	}
+
+	AccessorView readAccessor(
+		const GltfBin& bin,
+		const BufferView& bufferView,
+		const Accessor& accessor)
+	{
+		AccessorView out{};
+
+		const size_t compSize = componentSize(GltfComponentType(accessor.componentType));
+		const size_t compCount = typeComponentCount(accessor.type);
+		const size_t elemSize = compSize * compCount;
+
+		const size_t stride = bufferView.byteStride != 0 ? bufferView.byteStride : elemSize;
+
+		const size_t baseOffset =
+			bufferView.byteOffset +
+			accessor.byteOffset;
+
+
+		assert(baseOffset + stride * (accessor.count - 1) + elemSize
+			<= bufferView.byteOffset + bufferView.byteLength);
+
+		out.data = bin.data() + baseOffset;
+		out.stride = stride;
+		out.elementSize = elemSize;
+		out.count = accessor.count;
+
+		return out;
+	}
+
 }
 
 namespace gltf {
 
-	bool parse(const char* fileName)
+	bool parse(const char* fileName, Scene2& scene2)
 	{
 		Lexer lex(R"({ "x": [1, 2, 3] })");
 		for (;;) {
@@ -715,6 +873,70 @@ namespace gltf {
 		std::cout << "BufferViews" << scene.bufferViews.size() << "\n";
 		std::cout << "Buffers" << scene.buffers.size() << "\n";
 
+		GltfBin bin;
+		bin.loadFromFile("../scenes/" + scene.buffers[0].uri);
+
+		for (const auto& node : scene.nodes)
+		{
+			if (node.mesh.has_value())
+			{
+				Mesh m;
+				m.name = scene.meshes[*node.mesh].name;
+				for (const auto& prim : scene.meshes[*node.mesh].primitives)
+				{
+					Primitive p;
+					p.matIndex = prim.material;
+					{
+						const auto acc = scene.accessors[prim.indices];
+						const auto view = scene.bufferViews[acc.bufferView];
+						const auto idx = readAccessor(bin, view, acc);
+
+						for (size_t i = 0; i < idx.count; ++i)
+						{
+							const uint8_t* ptr = idx.data + i * idx.elementSize;
+
+							uint32_t index = 0;
+							writeGltfComponent(GltfComponentType(acc.componentType), ptr, &index);
+							
+							p.indices.push_back(index);
+						}						
+					}
+					{
+						for (const auto& [semantic, accessorIndex] : prim.attributes)
+						{
+							const Accessor& acc =
+								scene.accessors[accessorIndex];
+
+							const BufferView& view =
+								scene.bufferViews[acc.bufferView];
+
+							AccessorView a = readAccessor(bin, view, acc);
+
+							if (semantic == "POSITION")
+							{								
+								const size_t compSize = componentSize(GltfComponentType(acc.componentType));
+								for (size_t i = 0; i < a.count; ++i)
+								{									
+									Vector3 v;
+									const uint8_t* ptr = a.data + i * a.elementSize;
+									writeGltfComponent(GltfComponentType(acc.componentType), ptr + 0 * compSize, &v[0]);
+									writeGltfComponent(GltfComponentType(acc.componentType), ptr + 1 * compSize, &v[1]);
+									writeGltfComponent(GltfComponentType(acc.componentType), ptr + 2 * compSize, &v[2]);
+
+									p.positions.push_back(v);
+								}								
+							}
+							else if (semantic == "NORMAL") {} // VEC3 float 
+							else if (semantic == "TEXCOORD_0") {}// VEC2 float
+							else if (semantic == "TANGENT") {} // VEC4 float
+						}
+					}
+					m.primitives.push_back(p);
+				}
+
+				scene2.addNode(node.name, node.translation, m);
+			}
+		}
 
 		return false;
 	}

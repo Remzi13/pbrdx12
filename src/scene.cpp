@@ -154,3 +154,8 @@ float Scene::intersect(const math::Ray& ray, float tMin, float tMax, math::Spher
 {
 	return bvhSphere_.intersect(ray, tMin, tMax, sp);
 }
+
+void Scene2::addNode(const std::string& name, const Vector3& transition, const Mesh& mesh)
+{
+	nodes_.push_back({ name, transition, mesh });
+}
