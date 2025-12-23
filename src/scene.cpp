@@ -155,7 +155,32 @@ float Scene::intersect(const math::Ray& ray, float tMin, float tMax, math::Spher
 	return bvhSphere_.intersect(ray, tMin, tMax, sp);
 }
 
-void Scene2::addNode(const std::string& name, const Vector3& transition, const Mesh& mesh)
+
+
+void Scene2::addNode(const std::string& name, const std::vector<math::Triangle>& triangles )
 {
-	nodes_.push_back({ name, transition, mesh });
+	nodes_.push_back({ name, triangles });
+}
+
+void Scene2::addMaterial( const Material& m )
+{
+	materials_.push_back( m );
+}
+
+float Scene2::intersect( const math::Ray& ray, float tMin, float tMax, math::Triangle& tr ) const
+{
+	float closestT = tMax;
+	for ( const auto& node : nodes_ )
+	{
+		for ( const auto& triangle : node.triangles_ )
+		{
+			float t = math::intersect( ray, triangle, tMin, closestT );
+			if ( t < closestT )
+			{
+				closestT = t;
+				tr = triangle;
+			}
+		}
+	}
+	return closestT;
 }

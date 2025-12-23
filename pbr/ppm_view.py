@@ -26,7 +26,7 @@ class PPMViewer(QMainWindow):
         
         # Разрешаем метке расширяться, чтобы показать изображение
         self.image_label.setScaledContents(True)
-        
+
         self.layout.addWidget(self.image_label)
 
         # 3. Кнопка для открытия файла

@@ -28,6 +28,7 @@ struct Camera
 	Vector3 target;
 	Vector3 up;
 	float fov;
+	float aspectRatio;
 };
 
 class Scene
@@ -78,32 +79,27 @@ private:
 	BVH<math::Sphere> bvhSphere_;
 };
 
-struct Primitive
-{
-	size_t matIndex;
-	std::vector<int> indices;
-	std::vector<Vector3> positions;
-};
-
-struct Mesh
-{
-	std::string name;
-	std::vector<Primitive> primitives;
-};
-
 class Scene2
 {
 	struct Node
 	{
 		std::string name;
-		Vector3 transition;
-		Mesh mesh;
+		std::vector<math::Triangle> triangles_;
 	};
 
 public:
-	void addNode(const std::string& name, const Vector3& transition, const Mesh& mesh);
+	void addNode(const std::string& name, const std::vector<math::Triangle>& triangles);
+	void addMaterial( const Material& m );
+	const std::vector<Material>& materials() const { return materials_; }
+
+	float intersect( const math::Ray& ray, float tMin, float tMax, math::Triangle& tr ) const;
+
+	void setCamera( const Camera& camera ) { camera_ = camera; }
+	const Camera& camera() const { return camera_; }
 
 private:
+	Camera camera_;
 	std::vector<Node> nodes_;
+	std::vector<Material> materials_;
 
 };

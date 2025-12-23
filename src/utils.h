@@ -13,7 +13,7 @@ namespace math {
 		Vector3 a;
 		Vector3 b;
 		Vector3 c;
-		int matIndex;
+		size_t matIndex;
 	};
 
 	struct Sphere

@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(SRC
     ../src/vector.h
+    ../src/matrix.h
     ../src/scene.h
     ../src/scene.cpp
     ../src/utils.h

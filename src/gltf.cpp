@@ -17,6 +17,7 @@
 #include <assert.h>
 
 #include "vector.h"
+#include "matrix.h"
 
 namespace {
 
@@ -563,11 +564,11 @@ namespace {
 			{
 				Material m;
 				m.name = el.getAs<std::string>("name", "None");
-				m.emissiveFactor = el.getAs<Vector3>("emissiveFactor");
-				m.baseColorFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<Vector4>("baseColorFactor");
+				m.emissiveFactor = el.getAs<Vector3>("emissiveFactor", Vector3(0.0f, 0.0f, 0.0f));
+				m.baseColorFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<Vector4>("baseColorFactor", Vector4(0, 0, 0,0));
 				m.metallicFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<float>("metallicFactor");
 				m.roughnessFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<float>("roughnessFactor");
-				m.emissiveStrength = el.getAs<Element>("extensions").getAs<Element>("KHR_materials_emissive_strength").getAs<float>("emissiveStrength");
+				m.emissiveStrength = el.getAs<Element>("extensions").getAs<Element>("KHR_materials_emissive_strength").getAs<float>("emissiveStrength", 1.0);
 
 				materials.push_back(m);
 			}
@@ -880,12 +881,13 @@ namespace gltf {
 		{
 			if (node.mesh.has_value())
 			{
-				Mesh m;
-				m.name = scene.meshes[*node.mesh].name;
+				std::string name = scene.meshes[*node.mesh].name;
 				for (const auto& prim : scene.meshes[*node.mesh].primitives)
 				{
-					Primitive p;
-					p.matIndex = prim.material;
+
+					std::vector<int> indices;
+					std::vector<Vector3> positions;
+					size_t matIndex = prim.material;
 					{
 						const auto acc = scene.accessors[prim.indices];
 						const auto view = scene.bufferViews[acc.bufferView];
@@ -898,8 +900,8 @@ namespace gltf {
 							uint32_t index = 0;
 							writeGltfComponent(GltfComponentType(acc.componentType), ptr, &index);
 							
-							p.indices.push_back(index);
-						}						
+							indices.push_back(index);
+						}
 					}
 					{
 						for (const auto& [semantic, accessorIndex] : prim.attributes)
@@ -913,29 +915,63 @@ namespace gltf {
 							AccessorView a = readAccessor(bin, view, acc);
 
 							if (semantic == "POSITION")
-							{								
+							{
 								const size_t compSize = componentSize(GltfComponentType(acc.componentType));
 								for (size_t i = 0; i < a.count; ++i)
-								{									
+								{
 									Vector3 v;
 									const uint8_t* ptr = a.data + i * a.elementSize;
 									writeGltfComponent(GltfComponentType(acc.componentType), ptr + 0 * compSize, &v[0]);
 									writeGltfComponent(GltfComponentType(acc.componentType), ptr + 1 * compSize, &v[1]);
 									writeGltfComponent(GltfComponentType(acc.componentType), ptr + 2 * compSize, &v[2]);
 
-									p.positions.push_back(v);
-								}								
+									positions.push_back(v);
+								}
 							}
 							else if (semantic == "NORMAL") {} // VEC3 float 
 							else if (semantic == "TEXCOORD_0") {}// VEC2 float
 							else if (semantic == "TANGENT") {} // VEC4 float
 						}
 					}
-					m.primitives.push_back(p);
+					Matrix4 nodeWorld = computeLocalMatrix( node.translation, Vector3( 1.0f, 1.0f, 1.0f ), Quaternion( { node.rotation.x(), node.rotation.y(), node.rotation.z(), node.rotation.w() }) );
+
+					std::vector<math::Triangle> triangles;
+					for ( int i = 0; i < indices.size(); )
+					{
+						Vector3 p0 = transformPoint( nodeWorld, positions[indices[i + 0]] );
+						Vector3 p1 = transformPoint( nodeWorld, positions[indices[i + 1]] );
+						Vector3 p2 = transformPoint( nodeWorld, positions[indices[i + 2]] );
+						triangles.push_back( { p0, p1, p2, matIndex } );
+						i += 3;
+					}
+
+					scene2.addNode( node.name, triangles );
 				}
 
-				scene2.addNode(node.name, node.translation, m);
 			}
+			else if ( node.camera.has_value() )
+			{
+				Camera c;
+				c.fov = scene.cameras[*node.camera].yfov;
+				c.up = Vector3( 0.0f, 1.0f, 0.0f );
+				c.aspectRatio = scene.cameras[*node.camera].aspectRatio;
+				
+				Matrix4 nodeWorld = computeLocalMatrix( node.translation, Vector3( 1.0f, 1.0f, 1.0f ), Quaternion( { node.rotation.x(), node.rotation.y(), node.rotation.z(), node.rotation.w() } ) );
+				c.pos = transformPoint( nodeWorld, Vector3( 0.0f, 0.0f, 0.0f ) );
+				Vector3 forward = transformVector( nodeWorld, Vector3( 0, 0, -1 ) );
+				c.target = c.pos + forward;
+				scene2.setCamera( c );
+			}
+		}
+
+		for ( const auto& m : scene.materials )
+		{
+			Material mat;
+			mat.albedo = Vector3(m.baseColorFactor.x(), m.baseColorFactor.y(), m.baseColorFactor.z()) ;
+			mat.emission = m.emissiveFactor * m.emissiveStrength;
+			mat.metallic = m.metallicFactor;
+			mat.roughness = m.roughnessFactor;
+			scene2.addMaterial( mat );
 		}
 
 		return false;
