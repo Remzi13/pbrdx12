@@ -5,5 +5,5 @@
 
 namespace gltf
 {
-	bool parse(const char* name, Scene2& scene);
+	bool parse(const char* name, Scene& scene);
 }

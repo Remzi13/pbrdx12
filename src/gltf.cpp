@@ -565,9 +565,9 @@ namespace {
 				Material m;
 				m.name = el.getAs<std::string>("name", "None");
 				m.emissiveFactor = el.getAs<Vector3>("emissiveFactor", Vector3(0.0f, 0.0f, 0.0f));
-				m.baseColorFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<Vector4>("baseColorFactor", Vector4(0, 0, 0,0));
-				m.metallicFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<float>("metallicFactor");
-				m.roughnessFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<float>("roughnessFactor");
+				m.baseColorFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<Vector4>("baseColorFactor", Vector4(1.0f, 1.0f, 1.0f, 1.0f));
+				m.metallicFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<float>("metallicFactor", 1.0f);
+				m.roughnessFactor = el.getAs<Element>("pbrMetallicRoughness").getAs<float>("roughnessFactor", 1.0f);
 				m.emissiveStrength = el.getAs<Element>("extensions").getAs<Element>("KHR_materials_emissive_strength").getAs<float>("emissiveStrength", 1.0);
 
 				materials.push_back(m);
@@ -703,16 +703,16 @@ namespace {
 		FLOAT = 5126
 	};
 
-	void writeGltfComponent( GltfComponentType type, const void* in, void* out)
+	void writeGltfComponent(GltfComponentType type, const void* in, void* out)
 	{
 		switch (type)
 		{
-		case GltfComponentType::BYTE:			*reinterpret_cast<int8_t*>(out)		=	*reinterpret_cast<const int8_t*>(in);	break;
-		case GltfComponentType::UNSIGNED_BYTE:	*reinterpret_cast<uint8_t*>(out)	=	*reinterpret_cast<const uint8_t*>(in);	break;
-		case GltfComponentType::SHORT:			*reinterpret_cast<int16_t*>(out)	=	*reinterpret_cast<const int16_t*>(in);	break;
-		case GltfComponentType::UNSIGNED_SHORT:	*reinterpret_cast<uint16_t*>(out)	=	*reinterpret_cast<const uint16_t*>(in);	break;
-		case GltfComponentType::UNSIGNED_INT:	*reinterpret_cast<uint32_t*>(out)	=	*reinterpret_cast<const uint32_t*>(in);	break;
-		case GltfComponentType::FLOAT:			*reinterpret_cast<float*>(out)		=	*reinterpret_cast<const float*>(in);	break;
+		case GltfComponentType::BYTE:			*reinterpret_cast<int8_t*>(out) = *reinterpret_cast<const int8_t*>(in);	break;
+		case GltfComponentType::UNSIGNED_BYTE:	*reinterpret_cast<uint8_t*>(out) = *reinterpret_cast<const uint8_t*>(in);	break;
+		case GltfComponentType::SHORT:			*reinterpret_cast<int16_t*>(out) = *reinterpret_cast<const int16_t*>(in);	break;
+		case GltfComponentType::UNSIGNED_SHORT:	*reinterpret_cast<uint16_t*>(out) = *reinterpret_cast<const uint16_t*>(in);	break;
+		case GltfComponentType::UNSIGNED_INT:	*reinterpret_cast<uint32_t*>(out) = *reinterpret_cast<const uint32_t*>(in);	break;
+		case GltfComponentType::FLOAT:			*reinterpret_cast<float*>(out) = *reinterpret_cast<const float*>(in);	break;
 		default:
 			assert(false && "Unknown glTF component type");
 		}
@@ -841,16 +841,8 @@ namespace {
 
 namespace gltf {
 
-	bool parse(const char* fileName, Scene2& scene2)
+	bool parse(const char* fileName, Scene& scene)
 	{
-		Lexer lex(R"({ "x": [1, 2, 3] })");
-		for (;;) {
-			Token t = lex.next();
-			std::cout << int(t.type) << " " << t.text << "\n";
-			if (t.type == TokenType::End)
-				break;
-		}
-
 		std::ifstream file(fileName);
 		if (!file.is_open()) {
 			std::cerr << "Can`t open file " << fileName << std::endl;
@@ -858,39 +850,31 @@ namespace gltf {
 		}
 
 		std::stringstream buffer;
-		buffer << file.rdbuf(); // Read the file buffer into the stream
+		buffer << file.rdbuf();
 
 		std::string s = buffer.str();
 		Lexer lexer(s);
 		Parser parser(lexer);
-		Parser::SceneFile scene = parser.parseSceneFile();
+		Parser::SceneFile gltfScene = parser.parseSceneFile();
 
-		std::cout << "Scenes" << scene.scenes.size() << "\n";
-		std::cout << "Nodes: " << scene.nodes.size() << "\n";
-		std::cout << "Cameras: " << scene.cameras.size() << "\n";
-		std::cout << "Materials: " << scene.materials.size() << "\n";
-		std::cout << "Meshes: " << scene.meshes.size() << "\n";
-		std::cout << "Accessors" << scene.accessors.size() << "\n";
-		std::cout << "BufferViews" << scene.bufferViews.size() << "\n";
-		std::cout << "Buffers" << scene.buffers.size() << "\n";
 
 		GltfBin bin;
-		bin.loadFromFile("../scenes/" + scene.buffers[0].uri);
+		bin.loadFromFile("../scenes/" + gltfScene.buffers[0].uri);
 
-		for (const auto& node : scene.nodes)
+		for (const auto& node : gltfScene.nodes)
 		{
 			if (node.mesh.has_value())
 			{
-				std::string name = scene.meshes[*node.mesh].name;
-				for (const auto& prim : scene.meshes[*node.mesh].primitives)
+				std::string name = gltfScene.meshes[*node.mesh].name;
+				for (const auto& prim : gltfScene.meshes[*node.mesh].primitives)
 				{
 
 					std::vector<int> indices;
 					std::vector<Vector3> positions;
 					size_t matIndex = prim.material;
 					{
-						const auto acc = scene.accessors[prim.indices];
-						const auto view = scene.bufferViews[acc.bufferView];
+						const auto acc = gltfScene.accessors[prim.indices];
+						const auto view = gltfScene.bufferViews[acc.bufferView];
 						const auto idx = readAccessor(bin, view, acc);
 
 						for (size_t i = 0; i < idx.count; ++i)
@@ -899,18 +883,16 @@ namespace gltf {
 
 							uint32_t index = 0;
 							writeGltfComponent(GltfComponentType(acc.componentType), ptr, &index);
-							
+
 							indices.push_back(index);
 						}
 					}
 					{
 						for (const auto& [semantic, accessorIndex] : prim.attributes)
 						{
-							const Accessor& acc =
-								scene.accessors[accessorIndex];
+							const Accessor& acc = gltfScene.accessors[accessorIndex];
 
-							const BufferView& view =
-								scene.bufferViews[acc.bufferView];
+							const BufferView& view = gltfScene.bufferViews[acc.bufferView];
 
 							AccessorView a = readAccessor(bin, view, acc);
 
@@ -933,45 +915,45 @@ namespace gltf {
 							else if (semantic == "TANGENT") {} // VEC4 float
 						}
 					}
-					Matrix4 nodeWorld = computeLocalMatrix( node.translation, Vector3( 1.0f, 1.0f, 1.0f ), Quaternion( { node.rotation.x(), node.rotation.y(), node.rotation.z(), node.rotation.w() }) );
+					Matrix4 nodeWorld = computeLocalMatrix(node.translation, Vector3(1.0f, 1.0f, 1.0f), Quaternion({ node.rotation.x(), node.rotation.y(), node.rotation.z(), node.rotation.w() }));
 
 					std::vector<math::Triangle> triangles;
-					for ( int i = 0; i < indices.size(); )
+					for (int i = 0; i < indices.size(); )
 					{
-						Vector3 p0 = transformPoint( nodeWorld, positions[indices[i + 0]] );
-						Vector3 p1 = transformPoint( nodeWorld, positions[indices[i + 1]] );
-						Vector3 p2 = transformPoint( nodeWorld, positions[indices[i + 2]] );
-						triangles.push_back( { p0, p1, p2, matIndex } );
+						Vector3 p0 = transformPoint(nodeWorld, positions[indices[i + 0]]);
+						Vector3 p1 = transformPoint(nodeWorld, positions[indices[i + 1]]);
+						Vector3 p2 = transformPoint(nodeWorld, positions[indices[i + 2]]);
+						triangles.push_back({ p0, p1, p2, matIndex });
 						i += 3;
 					}
 
-					scene2.addNode( node.name, triangles );
+					scene.addNode(node.name, triangles);
 				}
 
 			}
-			else if ( node.camera.has_value() )
+			else if (node.camera.has_value())
 			{
 				Camera c;
-				c.fov = scene.cameras[*node.camera].yfov;
-				c.up = Vector3( 0.0f, 1.0f, 0.0f );
-				c.aspectRatio = scene.cameras[*node.camera].aspectRatio;
-				
-				Matrix4 nodeWorld = computeLocalMatrix( node.translation, Vector3( 1.0f, 1.0f, 1.0f ), Quaternion( { node.rotation.x(), node.rotation.y(), node.rotation.z(), node.rotation.w() } ) );
-				c.pos = transformPoint( nodeWorld, Vector3( 0.0f, 0.0f, 0.0f ) );
-				Vector3 forward = transformVector( nodeWorld, Vector3( 0, 0, -1 ) );
+				c.fov = gltfScene.cameras[*node.camera].yfov;
+				c.up = Vector3(0.0f, 1.0f, 0.0f);
+				c.aspectRatio = gltfScene.cameras[*node.camera].aspectRatio;
+
+				Matrix4 local = computeLocalMatrix(node.translation, Vector3(1.0f, 1.0f, 1.0f), Quaternion({ node.rotation.x(), node.rotation.y(), node.rotation.z(), node.rotation.w() }));
+				c.pos = transformPoint(local, Vector3(0.0f, 0.0f, 0.0f));
+				Vector3 forward = transformVector(local, Vector3(0, 0, -1));
 				c.target = c.pos + forward;
-				scene2.setCamera( c );
+				scene.setCamera(c);
 			}
 		}
 
-		for ( const auto& m : scene.materials )
+		for (const auto& m : gltfScene.materials)
 		{
 			Material mat;
-			mat.albedo = Vector3(m.baseColorFactor.x(), m.baseColorFactor.y(), m.baseColorFactor.z()) ;
+			mat.albedo = Vector3(m.baseColorFactor.x(), m.baseColorFactor.y(), m.baseColorFactor.z());
 			mat.emission = m.emissiveFactor * m.emissiveStrength;
 			mat.metallic = m.metallicFactor;
 			mat.roughness = m.roughnessFactor;
-			scene2.addMaterial( mat );
+			scene.addMaterial(mat);
 		}
 
 		return false;
