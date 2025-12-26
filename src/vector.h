@@ -115,7 +115,6 @@ public:
 };
 
 // point3 is just an alias for vec3, but useful for geometric clarity in the code.
-using point3 = Vector3;
 
 
 // Vector Utility Functions

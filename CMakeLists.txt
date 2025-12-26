@@ -4,21 +4,17 @@ cmake_minimum_required(VERSION 3.10)
 # Название нашего проекта и язык (C++)
 project(prtdx12 CXX)
 
-# Установим стандарт C++ (C++17 - хороший выбор)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 include_directories("third_party/D3D12/include")
 include_directories("third_party/Dxc/include")
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 set(SRC
     src/vector.h
     src/app.h
     src/app.cpp
-    src/render.h
-    src/render.cpp
-    src/buffers.h
-    src/buffers.cpp
     src/input.h
     src/input.cpp
     src/scene.h
@@ -28,11 +24,16 @@ set(SRC
 
     src/main.cpp
 )
-# Добавляем наш исполняемый файл, который будет собран из main.cpp
+
+add_subdirectory("src/render")
+add_subdirectory("src/core")
+
 add_executable(pbrdx12 ${SRC})
 
 set_target_properties(pbrdx12 PROPERTIES WIN32_EXECUTABLE TRUE)
 target_compile_definitions(pbrdx12 PRIVATE UNICODE _UNICODE)
+
+target_link_libraries(pbrdx12 debug render core)
 
 target_link_libraries(pbrdx12
     d3d12.lib

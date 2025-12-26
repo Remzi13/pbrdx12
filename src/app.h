@@ -5,10 +5,7 @@
 #ifndef RTDX12_APP_H
 #define RTDX12_APP_H
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-
-#include "render.h"
+#include "render/render.h"
 #include "input.h"
 #include "scene.h"
 
@@ -27,7 +24,7 @@ private:
 	void handleKeyEvent( const InputEvent& event );
 
 private:
-	Render render_;
+	render::Render render_;
 
 	Scene scene_;
 	bool isDirty_{ true };

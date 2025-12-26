@@ -1,5 +1,5 @@
 #pragma once
-
+#define NOMINMAX
 #include "vector.h"
 #include "utils.h"
 

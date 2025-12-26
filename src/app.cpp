@@ -1,7 +1,4 @@
-﻿//
-// Created by zakkh on 10.11.2025.
-//
-#include "app.h"
+﻿#include "app.h"
 
 #include "input.h"
 
@@ -19,14 +16,9 @@ namespace {
 bool App::init( HWND hwnd )
 {
 	hwnd_ = hwnd;
-
 	g_lastTime = std::chrono::high_resolution_clock::now();
-	//scene_.load( "../pbr/scenes/03-scene-easy.txt" );
-	//scene_.load("../pbr/scenes/03-scene-medium.txt");
-	//scene_.load("../pbr/scenes/03-scene-hard.txt");
-	scene_.load( "../pbr/scenes/04-scene-easy.txt" );
-	//scene_.load("../pbr/scenes/04-scene-medium.txt");
-	return render_.init( hwnd, scene_);
+	
+	return render_.init( hwnd );
 }
 
 void App::update()
@@ -54,7 +46,9 @@ void App::update()
 	}
 
 	inputUpdate();
-	render_.update( scene_, isDirty_, deltaTime );
+
+	render_.update( deltaTime );
+
 	isDirty_ = false;
 	render_.draw();
 }
@@ -181,23 +175,12 @@ void App::handleKeyEvent( const InputEvent& event )
 	case 'A':
 		if (pressed)
 		{
-			Sphere sphere;
-			sphere.radius = 0.3f;
-			// Случайная позиция
-			sphere.pos = Vector3({ (rand() % 10) - 5.0f, ( rand() % 10 ) - 5.0f, (rand() % 5) + 1.0f});
-			sphere.matIndex = 0;
-
-			//auto s = scene_.samples();
-			//scene_.setSamples( s + 1 );
-			scene_.addSphere(sphere);
 			isDirty_ = true;
 		}
 		break;
 	case 'Z':
 		if ( pressed )
 		{
-			auto s = scene_.samples();
-			scene_.setSamples( s - 1 );
 		}
 		break;
 	default:
