@@ -4,6 +4,7 @@
 #include <windows.h> 
 
 #include "render/device.h"
+#include "render/swapchain.h"
 
 namespace render {
 
@@ -12,6 +13,11 @@ namespace render {
 		device_ = makeShared<Device>();
 
 		device_->init();
+
+		swapChain_ = makeUnique<SwapChain>(device_.get(), hwnd, 800, 600, 2, format_);
+
+		viewport_ = device_->createTexture(TextureDesc::create2D(800, 600, format_, Colors::Green, TextureFlag::ShaderResource | TextureFlag::RenderTarget), "Viewport");
+
 
 		return false;
 	}
@@ -27,5 +33,8 @@ namespace render {
 
 	void Render::draw()
 	{
+		swapChain_->present();
+
+		device_->tick();
 	}
 }

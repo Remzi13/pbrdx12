@@ -87,8 +87,8 @@ namespace math {
 
 	void BBox::growTo(const Vector3& point)
 	{
-		min_ = ::min(min_, point);
-		max_ = ::max(max_, point);
+		min_ = math::Min(min_, point);
+		max_ = math::Max(max_, point);
 	}
 
 	void BBox::growTo(const math::Triangle& t)
@@ -110,8 +110,8 @@ namespace math {
 		{
 			const float origin = ray.origin[i];
 			const float dir = ray.direction[i];
-			const float minB = box.min()[i];
-			const float maxB = box.max()[i];
+			const float minB = box.Min()[i];
+			const float maxB = box.Max()[i];
 
 			if (fabs(dir) < 1e-8f)
 			{

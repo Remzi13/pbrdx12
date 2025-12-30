@@ -3,10 +3,6 @@
 
 //https://www.youtube.com/watch?v=C1H4zIiCOaI
 
-
-
-
-
 template<typename T>
 void BVH<T>::print() const
 {

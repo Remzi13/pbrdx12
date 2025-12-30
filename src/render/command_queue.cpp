@@ -45,4 +45,9 @@ namespace render {
 
 		return syncPoint_;
 	}
+
+	ID3D12CommandQueue* CommandQueue::queue() const
+	{
+		return commandQueue_;
+	}
 }

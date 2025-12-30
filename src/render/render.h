@@ -4,6 +4,8 @@
 
 #include "core/memory.h"
 
+#include "render/common.h"
+
 namespace render {
 	
 	using namespace memory;
@@ -18,7 +20,11 @@ namespace render {
 
 		void update(float dt);
 		void draw();
+
 	private:
+		ResourceFormat format_{ ResourceFormat::RGBA8_UNORM };
 		SharedPtr<class Device> device_;
+		SharedPtr<class SwapChain> swapChain_;
+		SharedPtr<class Texture> viewport_;
 	};
 }

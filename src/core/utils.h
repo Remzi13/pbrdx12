@@ -1,5 +1,4 @@
 #pragma once
-#define NOMINMAX
 
 #include "vector.h"
 
@@ -8,6 +7,7 @@ constexpr float INV_PI = 1.0f / PI;
 constexpr float EPS = 0.00000001f;
 
 namespace math {
+
 
 	struct Triangle
 	{
@@ -39,8 +39,8 @@ namespace math {
 	public:
 		BBox();
 
-		const Vector3& min() const { return min_; }
-		const Vector3& max() const { return max_; }
+		const Vector3& Min() const { return min_; }
+		const Vector3& Max() const { return max_; }
 
 		void growTo(const Vector3& point);
 		void growTo(const math::Triangle& t);
@@ -58,7 +58,7 @@ namespace math {
 
 	template <typename T>
 	constexpr T saturate(T x) {
-		return std::max(T(0.0), std::min(x, T(1.0)));
+		return math::Max(T(0.0), math::Min(x, T(1.0)));
 	}
 
 	template <typename T, typename U>
@@ -70,6 +70,8 @@ namespace math {
 	float intersect(const Ray& ray, const Triangle& tr, float tMin, float tMax);
 	float intersect(const Ray& ray, const Sphere& sp, float tMin, float tMax);
 	bool intersectBB(const Ray& ray, const BBox& box, float tMin, float tMax, float& tHit);
+
+
 }
 float randomFloat();
 float randFloat(float min, float max);

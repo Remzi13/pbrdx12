@@ -4,10 +4,16 @@
 
 #include "render/command_queue.h"
 #include "render/sync_point.h"
+#include "render/descriptor_heap.h"
+#include "render/page_allocator.h"
 
 namespace render {
 
 	class Device;
+	class Buffer;
+	class PageAllocator;
+	class RootSignature;
+	class PipelineState;
 
 	class CommandContext : public DeviceObject
 	{
@@ -53,15 +59,15 @@ namespace render {
 		//		}
 		//	}
 		//};
-		CommandContext(Device* device, CommandQueue::Type type) : DeviceObject(device), type_(type) {}
+		CommandContext(Device* device, CommandQueue::Type type, GPUDescriptorHeap* descriptorHeap, PageAllocator* pageAllocator);
 		~CommandContext() {}
 
 		//virtual void begin(RenderPassInfo info) = 0;
 		//virtual void end() = 0;
-		//virtual void reset() = 0;
+		void reset();
 		void flushResourceBarriers();
 		//virtual void insertResourceBarrier(Texture* pResource, ResourceState beforeState, ResourceState afterState, uint32 subResource) = 0;
-		//virtual void copyBuffer(const Buffer* pSource, const Buffer* pTarget, uint64 size, uint64 sourceOffset, uint64 destinationOffset) = 0;
+		void copyBuffer(const Buffer* pSource, const Buffer* pTarget, uint64 size, uint64 sourceOffset, uint64 destinationOffset);
 		//virtual void addResourceBarrier(Texture* pResource, ResourceState beforeState, ResourceState afterState, uint32 subResource) = 0;
 		//virtual void setRootSignature(const RootSignature* pRootSignature) = 0;
 		//virtual void setPipelineState(const PipelineState* pipelineState) = 0;
@@ -73,19 +79,21 @@ namespace render {
 		//virtual void setScissorRect(const math::RectF& rect) = 0;
 		//virtual void bindRootCBV(uint32 rootIndex, const void* data, uint32 size) = 0;
 		//virtual void bindResources(uint32 rootIndex, const Buffer* pViews, uint32 offset = 0) = 0;
-		//virtual SyncPoint execute() = 0;
+		SyncPoint execute();
 		//
 		//virtual void drawIndexedInstanced(uint32 indexCount, uint32 indexStart, uint32 instanceCount, uint32 minVertex = 0, uint32 instanceStart = 0) = 0;
 		//
 		void free(SyncPoint syncPoint);
 		//
 		//CommandQueue::Type type() const { return type_; }
-		//bool isComplete() const { return syncPoint_.isComplete(); }
+		bool isComplete() const { return syncPoint_.isComplete(); }
 
 		void close();
 		ID3D12GraphicsCommandList* list() const { return commandList_.Get(); }
+	private:
+		void clearState();
 
-	protected:
+	private:
 		CommandQueue::Type type_;
 		SyncPoint syncPoint_;
 
@@ -93,8 +101,15 @@ namespace render {
 
 		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator_;
 		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> commandList_;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> rtvHeap_;
+		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> dsvHeap_;
+		unsigned int rtvDescriptorSize_;
 
-		//device::Allocator allocator_;
-		//GPUDescriptorAllocator shaderResourceDescriptorAllocator_;
+		const RootSignature* currentRootSignature_{ nullptr };
+		const PipelineState* currentPipelineState_{ nullptr };
+
+
+		Allocator allocator_;
+		GPUDescriptorAllocator shaderResourceDescriptorAllocator_;
 	};
 }

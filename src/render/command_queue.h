@@ -26,9 +26,11 @@ namespace render {
 
 		SyncPoint execute(CommandContext* context);
 
+		ID3D12CommandQueue* queue() const;
+
 	private:
 		Type type_;
-
+		// TODO - comptr ?
 		ID3D12CommandQueue* commandQueue_;
 		SyncPoint syncPoint_;
 		Fence fence_;

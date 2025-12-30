@@ -4,6 +4,8 @@
 #include <ostream>
 #include <algorithm>
 
+#include "core/math.h"
+
 class Vector2 {
 public:
 	float d[2];
@@ -173,22 +175,29 @@ inline Vector3 unit_vector( const Vector3& v ) {
 	return v / v.length();
 }
 
-inline Vector3 min(const Vector3& a, const Vector3& b)
+inline Vector3 Min(const Vector3& a, const Vector3& b)
+{
+	return Vector3({
+		math::Min(a.x(), b.x()),
+		math::Min(a.y(), b.y()),
+		math::Min(a.z(), b.z())
+	});
+}
+
+inline Vector3 Max(const Vector3& a, const Vector3& b)
 {
 	return Vector3{
-		std::min(a.x(), b.x()),
-		std::min(a.y(), b.y()),
-		std::min(a.z(), b.z())
+		math::Max(a.x(), b.x()),
+		math::Max(a.y(), b.y()),
+		math::Max(a.z(), b.z())
 	};
 }
 
-inline Vector3 max(const Vector3& a, const Vector3& b)
+inline bool operator<(const Vector3& a, const Vector3& b)
 {
-	return Vector3{
-		std::max(a.x(), b.x()),
-		std::max(a.y(), b.y()),
-		std::max(a.z(), b.z())
-	};
+	if (a.x() != b.x()) return a.x() < b.x();
+	if (a.y() != b.y()) return a.y() < b.y();
+	return a.z() < b.z();
 }
 
 

@@ -15,6 +15,20 @@ set(RENDER_SRC
 	command_queue.cpp
 	command_context.h
 	command_context.cpp
+	descriptor_heap.h
+	descriptor_heap.cpp
+	swapchain.h
+	swapchain.cpp
+	resources.h
+	resources.cpp
+	texture.h
+	texture.cpp
+	ringbuffer_allocator.h
+	ringbuffer_allocator.cpp
+	page_allocator.h
+	page_allocator.cpp
+	utils.h
+	utils.cpp
 )
 
 add_library( ${Render_LIB} ${RENDER_SRC})

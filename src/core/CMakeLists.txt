@@ -5,6 +5,9 @@ set(Core_SRC
 	std_types.h
 	memory.h
 	memory.cpp
+	utils.h
+	utils.cpp
+	math.h
 )
 
 add_library( ${Core_LIB} ${Core_SRC})
