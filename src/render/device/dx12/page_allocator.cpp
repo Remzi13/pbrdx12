@@ -1,14 +1,11 @@
 #include "render/device/dx12/page_allocator.h"
 
-#include "math/constants.h"
-#include "math/utils.h"
-
 #include <format>
 
 #include "render/device/dx12/device.h"
 
 
-namespace elm::render::device {
+namespace render::device {
 
 	PageAllocator::PageAllocator(GraphicsDevice* device, BufferFlag bufferFlags, uint64 pageSize)
 		: DeviceObject(device), bufferFlags_(bufferFlags), pageSize_(pageSize)
@@ -19,7 +16,7 @@ namespace elm::render::device {
 	{		
 		if (pagesPool_.empty() || !pagesPool_.front().second.isComplete())
 		{
-			string name = std::format("Dynamic Allocation Buffer (%f KB)", math::BytesToKiloBytes * pageSize_);
+			string name = std::format("Dynamic Allocation Buffer (%f KB)", BytesToKiloBytes * pageSize_);
 			auto buffer = static_cast<DeviceDx12*>(parent())->createBuffer(Buffer::Desc{ .Size = pageSize_, .Flags = BufferFlag::Upload }, nullptr, 0, "Page");
 			return buffer;
 		}
@@ -43,13 +40,13 @@ namespace elm::render::device {
 
 	Allocation Allocator::allocate(uint64 size, int alignment)
 	{
-		uint64 bufferSize = math::utils::alignUp<uint64>(size, alignment);
+		uint64 bufferSize = core::alignUp<uint64>(size, alignment);
 		Allocation allocation;
 		allocation.Size = size;
 
 		if (bufferSize > pageAllocator_->pageSize())
 		{
-			ELM_ASSERT(false);
+			ASSERT(false);
 		//	Ref<Buffer> pPage = m_pPageManager->GetParent()->CreateBuffer(BufferDesc{ .Size = size, .Flags = BufferFlag::Upload }, "Large Page");
 		//	allocation.Offset = 0;
 		//	allocation.GpuHandle = pPage->GetGpuHandle();
@@ -58,7 +55,7 @@ namespace elm::render::device {
 		}
 		else
 		{
-			currentOffset_ = math::utils::alignUp<uint64>(currentOffset_, alignment);
+			currentOffset_ = core::alignUp<uint64>(currentOffset_, alignment);
 		
 			if (currentPage_ == nullptr || currentOffset_ + bufferSize >= currentPage_->size())
 			{

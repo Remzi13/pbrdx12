@@ -1,14 +1,12 @@
 #pragma once
 
-#include "math/base_types.h"
-
 #include "render/device/device_interface.h"
 #include "render/utils.h"
 #include "render/device/dx12/texture.h"
 #include "render/device/dx12/page_allocator.h"
 
 
-namespace elm::render {
+namespace render {
 
 	class DeviceDx12;
 
@@ -28,11 +26,11 @@ namespace elm::render {
 		void setRootSignature(const RootSignature* rootSignature) override;		
 		void setPipelineState(const PipelineState* pipelineState) override;
 		void setPrimitiveTopology(const PrimitiveTopology topology) override;
-		void setViewport(const math::RectF& rect, float minDepth = 0.0f, float maxDepth = 1.0f) override;
+		void setViewport(const core::RectF& rect, float minDepth = 0.0f, float maxDepth = 1.0f) override;
 		device::Allocation allocate(uint64 size, uint32 alignment = 16u) override;
 		void setVertexBuffer(Buffer::VertexView view) override;
 		void setIndexBuffer(Buffer::IndexView view) override;
-		void setScissorRect(const math::RectF& rect) override;
+		void setScissorRect(const core::RectF& rect) override;
 		SyncPoint execute() override;
 
 		void bindRootCBV(uint32 rootIndex, const void* data, uint32 size) override;		

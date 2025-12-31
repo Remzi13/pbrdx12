@@ -4,7 +4,7 @@
 
 #include "render/device/dx12/device.h"
 
-namespace elm::render {
+namespace render {
 	namespace {
 		static D3D12_DESCRIPTOR_RANGE_FLAGS sDefaultTableRangeFlags = D3D12_DESCRIPTOR_RANGE_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE | D3D12_DESCRIPTOR_RANGE_FLAG_DESCRIPTORS_VOLATILE;
 		static D3D12_ROOT_DESCRIPTOR_FLAGS sDefaultRootDescriptorFlags = D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC_WHILE_SET_AT_EXECUTE;
@@ -101,7 +101,7 @@ namespace elm::render {
 			case D3D12_SHADER_VISIBILITY_MESH:			visibilityFlags = visibilityFlags & ~D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS;			break;
 			case D3D12_SHADER_VISIBILITY_AMPLIFICATION:	visibilityFlags = visibilityFlags & ~D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS;	break;
 			case D3D12_SHADER_VISIBILITY_ALL:			visibilityFlags = D3D12_ROOT_SIGNATURE_FLAG_NONE;														break;
-			default:									ELM_ASSERT(false);																							break;
+			default:									ASSERT(false);																							break;
 			}
 
 			rootParameters[i] = rootParameter.Data;
@@ -131,7 +131,7 @@ namespace elm::render {
 		if (pErrorBlob)
 		{
 			const char* pError = (char*)pErrorBlob->GetBufferPointer();
-			ELM_LOG(Error, "RootSignature serialization error: %s", pError);
+			LOG(Error, "RootSignature serialization error: %s", pError);
 			return;
 		}
 		ThrowIfFailed(static_cast<DeviceDx12*>(parent())->device()->CreateRootSignature(0, pDataBlob->GetBufferPointer(), pDataBlob->GetBufferSize(), IID_PPV_ARGS(rootSignature_.GetAddressOf())));		
@@ -164,7 +164,7 @@ namespace elm::render {
 
 	uint32 RootSignatureDx12::numRootConstants(uint32 rootIndex) const
 	{ 
-		ELM_ASSERT(isRootConstant(rootIndex)); 
+		ASSERT(isRootConstant(rootIndex)); 
 		return rootParameters_[rootIndex].Data.Constants.Num32BitValues;
 	}
 

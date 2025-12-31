@@ -3,9 +3,8 @@
 #include "render/device/dx12/device.h"
 #include "render/device/dx12/command_context.h"
 
-#include "math/utils.h"
 
-namespace elm::render {
+namespace render {
 
 	CPUDescriptorHeap::CPUDescriptorHeap(GraphicsDevice* device, D3D12_DESCRIPTOR_HEAP_TYPE type, uint32 numDescriptors)
 		: DeviceObject(device), freeList_(numDescriptors), numDescriptors_(numDescriptors)//, m_Type(type)
@@ -43,9 +42,9 @@ namespace elm::render {
 		: DeviceObject(device), dynamicPageSize_(dynamicPageSize), numDescriptors_(numDescriptors), numDynamicDescriptors_(numDescriptors / 2), 
 		numPersistentDescriptors_(numDescriptors / 2), persistentHandles_(numDescriptors / 2), type_(type)
 	{
-		ELM_ASSERT(dynamicPageSize >= 32, "Page size must be at least 128 (is %d)", dynamicPageSize);
-		ELM_ASSERT(numDynamicDescriptors_ % dynamicPageSize == 0, "Number of descriptors must be a multiple of Page Size (%d)", dynamicPageSize);
-		ELM_ASSERT(type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV || type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Online Descriptor Heap must be either of CBV/SRV/UAV or Sampler type.");
+		ASSERT(dynamicPageSize >= 32, "Page size must be at least 128 (is %d)", dynamicPageSize);
+		ASSERT(numDynamicDescriptors_ % dynamicPageSize == 0, "Number of descriptors must be a multiple of Page Size (%d)", dynamicPageSize);
+		ASSERT(type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV || type == D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, "Online Descriptor Heap must be either of CBV/SRV/UAV or Sampler type.");
 
 		auto* rawDevice = dynamic_cast<DeviceDx12*>(device);
 
@@ -86,7 +85,7 @@ namespace elm::render {
 			cleanupDynamic();
 		}
 
-		ELM_ASSERT(!freeDynamicPages_.empty(), "Ran out of dynamic descriptor heap space (%d). Increase heap size.", numDynamicDescriptors_);
+		ASSERT(!freeDynamicPages_.empty(), "Ran out of dynamic descriptor heap space (%d). Increase heap size.", numDynamicDescriptors_);
 		DescriptorHeapPage* pPage = freeDynamicPages_.back();
 		freeDynamicPages_.pop_back();
 		return pPage;
@@ -121,7 +120,7 @@ namespace elm::render {
 			cleanupPersistent();
 		}
 
-		ELM_ASSERT(persistentHandles_.canAllocate(), "Out of persistent descriptor heap space (%d), increase heap size", numPersistentDescriptors_);
+		ASSERT(persistentHandles_.canAllocate(), "Out of persistent descriptor heap space (%d), increase heap size", numPersistentDescriptors_);
 		return startHandle_.Offset(persistentHandles_.allocate(), descriptorSize_);
 	}
 
@@ -206,8 +205,8 @@ namespace elm::render {
 		//gAssert(table.Capacity != 0, "Root parameter at index '%d' is not a descriptor table", rootIndex);
 		//gAssert(offset + handles.GetSize() <= table.Capacity, "Descriptor table at root index '%d' is too small (is %d but requires %d)", rootIndex, table.Capacity, offset + handles.GetSize());
 
-		table.Descriptors.resize(math::utils::Max((uint32)table.Descriptors.size(), uint32(1)));
-		table.StartIndex = math::utils::Min(offset, table.StartIndex);
+		table.Descriptors.resize(core::Max((uint32)table.Descriptors.size(), uint32(1)));
+		table.StartIndex = core::Min(offset, table.StartIndex);
 		table.Descriptors[offset] = handle->descriptor();
 	}
 

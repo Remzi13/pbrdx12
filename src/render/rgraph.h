@@ -6,7 +6,7 @@
 #include "render/device/texture.h"
 #include "render/device/device_interface.h"
 
-namespace elm::render {
+namespace render {
 
 	class RGPass
 	{

@@ -2,12 +2,11 @@
 
 #include "core/memory.h"
 
-namespace elm::render {
+namespace render {
 	class Buffer;
 }
-
-namespace elm::render::device {
-	using namespace memory;
+namespace render::device {
+	
 	struct Allocation
 	{
 		SharedPtr<Buffer> resource;

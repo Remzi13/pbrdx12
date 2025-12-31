@@ -1,10 +1,12 @@
 #pragma once
 
-#include "data/color.h"
+#include "core/colors.h"
 
 #include "render/utils.h"
 
-namespace elm::render {
+namespace render {
+
+	using namespace core;
 
 	enum class TextureType : uint8
 	{		

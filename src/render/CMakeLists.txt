@@ -1,7 +1,5 @@
 set(RENDER_LIB "render")
 
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/D3D12/include")
-
 
 set(RENDER_SRC
 	render.h
@@ -51,30 +49,13 @@ set(DEVICE_SRC
 	device/dx12/ringbuffer_allocator.cpp
 )
 
-
-set(DX12_SRC
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/D3D12/include/d3d12.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/D3D12/include/d3dcommon.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/D3D12/include/d3dx12/d3dx12_root_signature.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/D3D12/include/d3dx12/d3dx12_core.h"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/Dxc/include/dxc/dxcapi.h"
-)
-
-add_library( ${RENDER_LIB} ${RENDER_SRC} ${DEVICE_SRC} ${DX12_SRC} )
+add_library( ${RENDER_LIB} ${RENDER_SRC} ${DEVICE_SRC}  )
 
 source_group( "device" FILES ${DEVICE_SRC} )
-source_group( "device/tp/dx12" FILES ${DX12_SRC})
 source_group( "src" FILES ${RENDER_SRC})
-
 
 SET_PROPERTY( TARGET ${RENDER_LIB} PROPERTY FOLDER "Libs")
 message("CMAKE_BINARY_DIR  ${CMAKE_BINARY_DIR}")
-message("==== ${THIRD_PARTY_DIR}/D3D12/bin/D3D12Core.dll")
-add_custom_command(TARGET ${RENDER_LIB} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${THIRD_PARTY_DIR}/D3D12/bin/D3D12Core.dll" "${CMAKE_BINARY_DIR}/Debug/")
-add_custom_command(TARGET ${RENDER_LIB} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${THIRD_PARTY_DIR}/D3D12/bin/d3d12SDKLayers.dll" "${CMAKE_BINARY_DIR}/Debug/")
-add_custom_command(TARGET ${RENDER_LIB} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${THIRD_PARTY_DIR}/Dxc/bin/dxcompiler.dll" "${CMAKE_BINARY_DIR}/Debug/")
-add_custom_command(TARGET ${RENDER_LIB} POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy "${THIRD_PARTY_DIR}/Dxc/bin/dxil.dll" "${CMAKE_BINARY_DIR}/Debug/")
-
 target_include_directories (${RENDER_LIB} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_link_libraries(${RENDER_LIB} debug data d3d12.lib dxgi.lib dxguid.lib)
+

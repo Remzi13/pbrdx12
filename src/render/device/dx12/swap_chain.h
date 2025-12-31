@@ -5,11 +5,8 @@
 #include "render/device/dx12/texture.h"
 #include "render/device/dx12/fence.h"
 
-#include "D3D12/include/d3d12.h"
-#include "D3D12/include/d3dx12/d3dx12.h"
 #include <dxgi1_6.h>
-
-namespace elm::render {
+namespace render {
 
 	class DeviceDx12;
 
@@ -26,7 +23,7 @@ namespace elm::render {
 	private:
 		IDXGISwapChain* swapChain_;
 		ResourceFormat format_;
-		vector<memory::UniquePtr<TextureDx12>> backBuffers_;
+		vector<UniquePtr<TextureDx12>> backBuffers_;
 		int currentBackBuffer_{ 0 };
 		uint64 curretntFence_{ 0 };
 

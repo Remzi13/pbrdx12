@@ -4,12 +4,10 @@
 #include "render/device/dx12/ringbuffer_allocator.h"
 #include "render/device/dx12/page_allocator.h"
 
-#include "D3D12/include/d3d12.h"
-#include "D3D12/include/d3dx12/d3dx12.h"
-
+#include <d3d12.h>
 #include <dxgi1_6.h>
 
-namespace elm::render {
+namespace render {
 
 	class CPUDescriptorHeap;
 	class GPUDescriptorHeap;

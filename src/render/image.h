@@ -6,7 +6,7 @@
 
 #include "render/formats.h"
 
-namespace elm::render {
+namespace render {
 
 	class Image
 	{
@@ -37,7 +37,7 @@ namespace elm::render {
 		uint32 depth_ = 1;
 		uint32 mipLevels_ = 1;
 		vector<uint8> data_;
-		memory::UniquePtr<Image> next_;
+		UniquePtr<Image> next_;
 	};
 
 }

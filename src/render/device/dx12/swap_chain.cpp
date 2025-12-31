@@ -2,11 +2,11 @@
 
 #include "render/utils.h"
 
+#include "render/device/device_interface.h"
 #include "render/device/dx12/device.h"
 #include "render/device/dx12/command_queue.h"
 
-
-namespace elm::render {
+namespace render {
 
 	SwapChainDx12::SwapChainDx12(DeviceDx12* device, HWND hwnd, int width, int height, int numFrames, ResourceFormat format)
 		: SwapChain(device, numFrames), hwnd_(hwnd), format_(format)

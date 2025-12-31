@@ -5,7 +5,7 @@
 #include "render/device/dx12/device.h"
 #include "render/device/dx12/command_context.h"
 
-namespace elm::render {
+namespace render {
 
 	CommandQueueDx12::CommandQueueDx12(DeviceDx12* device, CommandQueue::Type type) 
 		: CommandQueue(device, type), fence_(device, "CommandQueue Fence")
@@ -13,14 +13,14 @@ namespace elm::render {
 		D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 		switch (type)
 		{
-		case elm::render::CommandQueue::GRAPHICS:
+		case render::CommandQueue::GRAPHICS:
 			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 			break;
-		case elm::render::CommandQueue::COPY:
+		case render::CommandQueue::COPY:
 			queueDesc.Type = D3D12_COMMAND_LIST_TYPE_COPY;
 			break;
 		default:
-			ELM_ASSERT(false)
+			ASSERT(false)
 			break;
 		}		
 		queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;

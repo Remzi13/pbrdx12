@@ -1,18 +1,17 @@
 #include "render/image.h"
 
 #include "core/debug.h"
-
-#include "math/utils.h"
+#include "core/math_utils.h"
 
 #include "render/utils.h"
 
-namespace elm::render {
+namespace render {
 
 	namespace {
 		
 		uint64 textureMipByteSize(ResourceFormat format, uint32 width, uint32 height, uint32 depth, uint32 mipIndex)
 		{
-			return slicePitch(format, width, height, mipIndex) * math::utils::Max(1u, depth >> mipIndex);
+			return slicePitch(format, width, height, mipIndex) * core::Max(1u, depth >> mipIndex);
 		}
 
 		uint64 textureByteSize(ResourceFormat format, uint32 width, uint32 height, uint32 depth, uint32 numMips)
@@ -172,12 +171,12 @@ namespace elm::render {
 				imageChainCount = dx10Header.arraySize;
 				isArray_ = true;
 			}
-			ELM_ASSERT(isArray_ == false);
+			ASSERT(isArray_ == false);
 
-			width_		= math::utils::Max(1u, header.dwWidth);
-			height_		= math::utils::Max(1u, header.dwHeight);
-			depth_		= math::utils::Max(1u, header.dwDepth);
-			mipLevels_	= math::utils::Max(1u, header.dwMipMapCount);
+			width_		= core::Max(1u, header.dwWidth);
+			height_		= core::Max(1u, header.dwHeight);
+			depth_		= core::Max(1u, header.dwDepth);
+			mipLevels_	= core::Max(1u, header.dwMipMapCount);
 			Image* current = this;
 			for (uint32 i = 0; i < imageChainCount; ++i)
 			{
@@ -185,7 +184,7 @@ namespace elm::render {
 				file.read(current->data_.data(), static_cast<uint32>(current->data_.size()));
 				if (i < imageChainCount - 1)
 				{
-					current->next_ = memory::makeUnique<Image>();
+					current->next_ = makeUnique<Image>();
 					current->next_->format_ = format_;
 					current = current->next_.get();
 				}

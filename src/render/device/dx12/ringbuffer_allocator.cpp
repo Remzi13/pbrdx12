@@ -3,7 +3,7 @@
 #include "render/device/dx12/device.h"
 #include "render/device/dx12/resource.h"
 
-namespace elm::render::device {
+namespace render::device {
 
 	RingBufferAllocator::RingBufferAllocator(GraphicsDevice* parent, uint32 size) 
 		: DeviceObject(parent), size_(size)

@@ -4,7 +4,7 @@
 
 #include "render/device/device_interface.h"
 
-namespace elm::render::device {
+namespace render::device {
 	
 	class Fence : public DeviceObject
 	{
@@ -24,7 +24,7 @@ namespace elm::render::device {
 			{
 				return true;
 			}
-			lastCompleted_ = max(lastCompleted_, fence_->GetCompletedValue());
+			lastCompleted_ = core::Max(lastCompleted_, fence_->GetCompletedValue());
 			return fenceValue <= lastCompleted_;
 		}
 

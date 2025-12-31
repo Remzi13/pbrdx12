@@ -8,7 +8,7 @@
 
 #include <DirectXColors.h>
 
-namespace elm::render {
+namespace render {
 
 	namespace {
 
@@ -18,10 +18,10 @@ namespace elm::render {
 		{
 			switch (type)
 			{
-			case elm::render::CommandQueue::GRAPHICS: return D3D12_COMMAND_LIST_TYPE_DIRECT;
-			case elm::render::CommandQueue::COPY: return D3D12_COMMAND_LIST_TYPE_COPY;
+			case render::CommandQueue::GRAPHICS: return D3D12_COMMAND_LIST_TYPE_DIRECT;
+			case render::CommandQueue::COPY: return D3D12_COMMAND_LIST_TYPE_COPY;
 			default:
-				ELM_ASSERT(false);
+				ASSERT(false);
 				break;
 			}
 			return D3D12_COMMAND_LIST_TYPE_NONE;
@@ -114,7 +114,7 @@ namespace elm::render {
 	
 	void CommandContextDx12::begin(RenderPassInfo info)
 	{
-		ELM_ASSERT(!inRenderPass_, "Already in RenderPass");
+		ASSERT(!inRenderPass_, "Already in RenderPass");
 
 		flushResourceBarriers();
 
@@ -141,7 +141,7 @@ namespace elm::render {
 				dsvDesc.ViewDimension = desc.SampleCount > 1 ? D3D12_DSV_DIMENSION_TEXTURE2DMS : D3D12_DSV_DIMENSION_TEXTURE2D;
 				break;			
 			default:
-				ELM_ASSERT(false, "Unsupported RenderTarget ")
+				ASSERT(false, "Unsupported RenderTarget ")
 				break;
 			}
 			if (EnumHasAllFlags(info.depthTarget.Flags, RenderPassDepthFlags::ReadOnlyDepth))
@@ -174,7 +174,7 @@ namespace elm::render {
 				rtvDesc.ViewDimension = desc.SampleCount > 1 ? D3D12_RTV_DIMENSION_TEXTURE2DMS : D3D12_RTV_DIMENSION_TEXTURE2D;
 				break;			
 			default:
-				ELM_ASSERT(false, "Unsupported RenderTarget ")
+				ASSERT(false, "Unsupported RenderTarget ")
 				break;
 		}
 
@@ -184,7 +184,7 @@ namespace elm::render {
 
 		if (EnumHasAnyFlags(info.renderTarget.Flags, RenderPassColorFlags::Clear))
 		{
-			//ELM_ASSERT(data.pTarget->GetClearBinding().BindingValue == ClearBinding::ClearBindingValue::Color);
+			//ASSERT(data.pTarget->GetClearBinding().BindingValue == ClearBinding::ClearBindingValue::Color);
 			FLOAT colorRGBA[4];
 			convertFormat(info.renderTarget.texture->clearColor(), colorRGBA);
 			commandList_->ClearRenderTargetView(rtv, colorRGBA, 0, nullptr);
@@ -193,7 +193,7 @@ namespace elm::render {
 
 		commandList_->OMSetRenderTargets(1, rtvs.data(), false, dsvHandle.ptr != 0 ? &dsvHandle : nullptr);
 		
-		setViewport(math::RectF(0, 0, (float)renderTarget->width(), (float)renderTarget->height()), 0, 1);
+		setViewport(core::RectF(0, 0, (float)renderTarget->width(), (float)renderTarget->height()), 0, 1);
 		inRenderPass_ = true;
 	}
 
@@ -201,7 +201,7 @@ namespace elm::render {
 	{		
 		if (EnumHasAllFlags(currentPass_.renderTarget.Flags, RenderPassColorFlags::Resolve))
 		{
-			ELM_ASSERT(false);
+			ASSERT(false);
 			if (currentPass_.renderTarget.texture->desc().SampleCount > 1)
 			{				
 				//TextureDx12* renderTarget = static_cast<TextureDx12*>(currentPass_.renderTarget.texture);
@@ -240,8 +240,8 @@ namespace elm::render {
 	{
 		const auto t = static_cast<const BufferDx12*>(traget);
 		const auto s = static_cast<const BufferDx12*>(source);
-		ELM_ASSERT(s && s->resource(), "Source is invalid");
-		ELM_ASSERT(t && t->resource(), "Target is invalid");
+		ASSERT(s && s->resource(), "Source is invalid");
+		ASSERT(t && t->resource(), "Target is invalid");
 		
 		flushResourceBarriers();
 		
@@ -306,7 +306,7 @@ namespace elm::render {
 		return commandList_.Get();
 	}
 
-	void CommandContextDx12::setViewport(const math::RectF& rect, float minDepth, float maxDepth )
+	void CommandContextDx12::setViewport(const core::RectF& rect, float minDepth, float maxDepth )
 	{
 		D3D12_VIEWPORT viewport = {
 			.TopLeftX = rect.Left,
@@ -321,7 +321,7 @@ namespace elm::render {
 		setScissorRect(rect);
 	}
 
-	void CommandContextDx12::setScissorRect(const math::RectF& rect)
+	void CommandContextDx12::setScissorRect(const core::RectF& rect)
 	{
 		D3D12_RECT r = {
 			.left = (LONG)rect.Left,
@@ -406,9 +406,9 @@ namespace elm::render {
 		bool isRootConstants = pRootSignature->isRootConstant(rootIndex);
 		if (isRootConstants)
 		{
-			ELM_ASSERT(dataSize % sizeof(uint32) == 0);
+			ASSERT(dataSize % sizeof(uint32) == 0);
 			uint32 rootConstantsSize = pRootSignature->numRootConstants(rootIndex) * sizeof(uint32);
-			ELM_ASSERT(dataSize <= rootConstantsSize);
+			ASSERT(dataSize <= rootConstantsSize);
 
 #ifdef _DEBUG
 			// In debug, write 0xCDCDCDCD to unwritten root constants
@@ -436,7 +436,7 @@ namespace elm::render {
 			device::Allocation allocation = allocate(dataSize, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
 			memcpy(allocation.mappedMemory, data, dataSize);
 
-			ELM_ASSERT(!pRootSignature->isRootConstant(rootIndex));
+			ASSERT(!pRootSignature->isRootConstant(rootIndex));
 			//if (m_CurrentCommandContext == CommandListContext::Graphics)
 			//	m_pCommandList->SetGraphicsRootConstantBufferView(rootIndex, allocation.GpuHandle);
 			//else
@@ -452,7 +452,7 @@ namespace elm::render {
 
 	void CommandContextDx12::drawIndexedInstanced(uint32 indexCount, uint32 indexStart, uint32 instanceCount, uint32 minVertex, uint32 instanceStart)
 	{
-		ELM_ASSERT(currentPipelineState_);
+		ASSERT(currentPipelineState_);
 		//gAssert(m_CurrentCommandContext == CommandListContext::Graphics);
 		prepareDraw();
 		commandList_->DrawIndexedInstanced(indexCount, instanceCount, indexStart, minVertex, instanceStart);

@@ -2,12 +2,9 @@
 
 #include "core/std_types.h"
 
-#include "D3D12/include/d3d12.h"
+#include <d3d12.h>
 
-#include <dxgidebug.h>
-#include <wrl.h>
-
-namespace elm::render {
+namespace render {
 	using ID3D12ResourceX = ID3D12Resource;
 	using ID3D12DeviceX = ID3D12Device5;
 	

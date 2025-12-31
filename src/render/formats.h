@@ -1,6 +1,6 @@
 #pragma once
 
-namespace elm::render {
+namespace render {
 	enum class ShaderType
 	{
 		Vertex,

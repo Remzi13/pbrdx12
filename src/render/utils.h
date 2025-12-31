@@ -1,34 +1,37 @@
 #pragma once
 
-#include "math/matrix.h"
+//#include "math/matrix.h"
 
-#include "data/color.h"
+#include "core/colors.h"
+
+#include "vector.h"
+#include "matrix.h"
 
 #include "render/device/dx12/dx12.h"
 #include "render/formats.h"
 
+#include <d3d12.h>
 #include <DirectXMath.h>
-#include <Windows.h>
 #include <string>
 
 #ifndef ThrowIfFailed
 #define ThrowIfFailed(x)						                                            \
 {						                                                                    \
     HRESULT hr__ = (x);																		\
-    std::wstring wfn = elm::render::device::AnsiToWString(__FILE__);						\
-    if(FAILED(hr__)) { throw elm::render::device::DxException(hr__, L#x, wfn, __LINE__); }	\
+    std::wstring wfn = render::device::AnsiToWString(__FILE__);						\
+    if(FAILED(hr__)) { throw render::device::DxException(hr__, L#x, wfn, __LINE__); }	\
 }
 #endif
 
 
-namespace elm::render {
+namespace render {
 
 	DXGI_FORMAT convertFormat(ResourceFormat format);
 	ResourceFormat convertFormat(DXGI_FORMAT format);
 	D3D12_RESOURCE_STATES convertFormat(ResourceState state);
 	ResourceState convertFormat(D3D12_RESOURCE_STATES state);
 
-	void convertFormat(Color color, FLOAT outColor[4]);
+	void convertFormat(core::Color color, FLOAT outColor[4]);
 	D3D12_PRIMITIVE_TOPOLOGY convertFormat(PrimitiveTopology topology);
 
 	struct FormatInfo
@@ -61,35 +64,35 @@ namespace elm::render {
 
 		std::wstring AnsiToWString(const std::string& str);
 
-		inline DirectX::XMFLOAT3 convert(const math::Vector3& vector)
+		inline DirectX::XMFLOAT3 convert(const Vector3& vector)
 		{
-			return DirectX::XMFLOAT3(vector.x, vector.y, vector.z);
+			return DirectX::XMFLOAT3(vector.x(), vector.y(), vector.z());
 		}
 
-		inline math::Vector3 convert(DirectX::XMFLOAT3 v)
+		inline Vector3 convert(DirectX::XMFLOAT3 v)
 		{
 			return { v.x, v.y, v.z };
 		}
 
-		inline DirectX::XMFLOAT4 convert(const math::Vector4& vector)
+		inline DirectX::XMFLOAT4 convert(const Vector4& vector)
 		{
-			return DirectX::XMFLOAT4(vector.x, vector.y, vector.z, vector.w);
+			return DirectX::XMFLOAT4(vector.x(), vector.y(), vector.z(), vector.w());
 		}
 
-		inline math::Vector4 convert(DirectX::XMFLOAT4 v)
+		inline Vector4 convert(DirectX::XMFLOAT4 v)
 		{
 			return { v.x, v.y, v.z, v.w };
 		}
 
-		inline DirectX::XMMATRIX convert(const math::Matrix4x4& matrix)
+		inline DirectX::XMMATRIX convert(const Matrix4& matrix)
 		{
-			auto mat = DirectX::XMFLOAT4X4(matrix.data());
+			auto mat = DirectX::XMFLOAT4X4(matrix.m);
 			return XMLoadFloat4x4(&mat);
 		}
 
-		inline math::Matrix4x4 convert(const DirectX::XMFLOAT4X4& matrix)
+		inline Matrix4 convert(const DirectX::XMFLOAT4X4& matrix)
 		{
-			math::Matrix4x4 m;
+			Matrix4 m;
 			for (int i = 0; i < 4; ++i)
 			{
 				for (int j = 0; j < 4; ++j)
@@ -101,9 +104,9 @@ namespace elm::render {
 		}
 
 
-		math::Matrix4x4 perspectiveFovLH(float fovAngleY, float aspectRatio, float nearZ, float farZ);
-		math::Matrix4x4 rotationAxis(const math::Vector3& axis, float angle);
-		math::Matrix4x4 rotateY(float angle);
-		bool triangleIntersect(const math::Vector4& rayOrigin, const math::Vector4& rayDir, const math::Vector3& v0, const math::Vector3& v1, const math::Vector3& v2, float& t);
+		Matrix4 perspectiveFovLH(float fovAngleY, float aspectRatio, float nearZ, float farZ);
+		Matrix4 rotationAxis(const Vector3& axis, float angle);
+		Matrix4 rotateY(float angle);
+		bool triangleIntersect(const Vector4& rayOrigin, const Vector4& rayDir, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& t);
 	}
 }

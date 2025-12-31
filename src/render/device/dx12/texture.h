@@ -6,7 +6,7 @@
 #include "render/device/dx12/resource.h"
 #include "render/image.h"
 
-namespace elm::render {
+namespace render {
 	
 	class TextureDx12 : public Texture, public DeviceResource
 	{

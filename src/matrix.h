@@ -6,6 +6,16 @@ struct Matrix4
 {
     float m[16]; // column-major
 
+    float* operator[](size_t i)
+    {
+        return &m[i * 4];
+    }
+
+    const float* operator[](size_t i) const
+    {
+        return &m[i * 4];
+    }
+
     static Matrix4 identity()
     {
         Matrix4 r{};

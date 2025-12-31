@@ -5,7 +5,7 @@
 #include "render/device/dx12/device.h"
 #include "render/device/dx12/shader.h"
 
-namespace elm::render {
+namespace render {
 
 	void PipelineStateDescriptor::setRootSignature(RootSignatureType type, GraphicsDevice* device)
 	{
@@ -65,7 +65,7 @@ namespace elm::render {
 			desc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
 			break;		
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 			break;
 		}
 	}
@@ -86,7 +86,7 @@ namespace elm::render {
 			dssDesc_.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL;
 			break;
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 			break;
 		}		
 	}
@@ -115,7 +115,7 @@ namespace elm::render {
 			rasterizer_.CullMode = D3D12_CULL_MODE_NONE;
 			break;
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 			break;
 		}
 	}

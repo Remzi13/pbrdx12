@@ -1,15 +1,49 @@
 #pragma once
 
+#include "core/debug.h"
+
 #include "render/device/device_interface.h"
 
-#include "D3D12/include/d3d12.h"
-#include "D3D12/include/d3dx12/d3dx12.h"
-
-#include "data/custom_structs.h"
-
 #include <mutex>
+#include <numeric>
 
-namespace elm::render {
+
+namespace render {
+
+	struct FreeList
+	{
+	public:
+		FreeList(uint32 size)
+		{
+			list_.resize(size);
+			std::iota(list_.begin(), list_.end(), 0);
+		}
+
+		~FreeList()
+		{
+			//ELM_ASSERT(count_ == 0);
+		}
+
+		uint32 allocate()
+		{
+			uint32 slot = count_++;
+			ASSERT(slot < list_.size());
+			return list_[slot];
+		}
+
+		void free(uint32 index)
+		{
+			uint32 freed_index = count_--;
+			ASSERT(freed_index > 0);
+			list_[freed_index - 1] = index;
+		}
+
+		bool canAllocate() const { return count_ < list_.size(); }
+
+	private:
+		vector<uint32> list_;
+		uint32 count_ = 0;
+	};
 
 	class DescriptorHandle
 	{
@@ -71,7 +105,7 @@ namespace elm::render {
 
 	private:
 		Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> heap_;
-		core::FreeList freeList_;
+		FreeList freeList_;
 		uint32 numDescriptors_;
 		uint32 descriptorSize_ = 0;
 		std::mutex mutex_;
@@ -108,7 +142,7 @@ namespace elm::render {
 		DescriptorHandle startHandle_;
 		std::mutex allocationLock_;
 
-		core::FreeList persistentHandles_;
+		FreeList persistentHandles_;
 		vector<std::unique_ptr<DescriptorHeapPage>> dynamicPages_;
 		queue<DescriptorHeapPage*> releasedDynamicPages_;
 		vector<DescriptorHeapPage*> freeDynamicPages_;

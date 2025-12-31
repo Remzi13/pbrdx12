@@ -1,7 +1,7 @@
 #include "render/device/dx12/resource.h"
 #include "render/device/dx12/device.h"
 
-namespace elm::render {
+namespace render {
 
 	DeviceResource::DeviceResource( GraphicsDevice* device, ID3D12ResourceX* resource ) : DeviceObject(device), resource_(resource)
 	{		

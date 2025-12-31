@@ -6,7 +6,7 @@
 
 #include <D3Dcompiler.h>
 
-namespace elm::render {
+namespace render {
 	
 	namespace utils {
 
@@ -72,7 +72,7 @@ namespace elm::render {
 			case D3D12_RESOURCE_STATE_VIDEO_ENCODE_READ:
 			case D3D12_RESOURCE_STATE_VIDEO_ENCODE_WRITE:
 			default:
-				ELM_ASSERT(false);
+				ASSERT(false);
 				break;
 			}
 			return "Unknown";
@@ -91,7 +91,7 @@ namespace elm::render {
 			case D3D12_COMMAND_LIST_TYPE_VIDEO_ENCODE: return "VideoEncode";
 			case D3D12_COMMAND_LIST_TYPE_NONE: return "None";
 			default:
-				ELM_ASSERT(false);
+				ASSERT(false);
 				break;
 			}
 			return "Unknown";

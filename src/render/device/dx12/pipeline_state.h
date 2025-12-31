@@ -3,11 +3,10 @@
 #include "render/utils.h"
 #include "render/device/dx12/dx12.h"
 #include "render/device/dx12/root_signature.h"
-#include "D3D12/include/d3dx12/d3dx12_core.h"
 
 #include <span>
 
-namespace elm::render {
+namespace render {
 	class PipelineStateDescriptor
 	{
 		friend class PipelineStateDx12;

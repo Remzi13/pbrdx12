@@ -3,10 +3,8 @@
 #include "core/std_types.h"
 #include "render/device/dx12/dx12.h"
 #include "render/device/device_interface.h"
-#include "D3D12/include/d3d12.h"
-#include "D3D12/include/d3dx12/d3dx12.h"
 
-namespace elm::render {
+namespace render {
 	class RootSignatureDx12 : public RootSignature
 	{
 	public:

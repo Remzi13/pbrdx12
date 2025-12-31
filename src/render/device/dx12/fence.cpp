@@ -3,7 +3,7 @@
 #include "render/device/dx12/device.h"
 #include "render/device/dx12/command_queue.h"
 
-namespace elm::render::device {
+namespace render::device {
 
 	Fence::Fence(GraphicsDevice* device, const char* name, uint64 value)
 		: DeviceObject(device), currentValue_(value +1), lastSignaled_(0), lastCompleted_(value)
@@ -55,7 +55,7 @@ namespace elm::render::device {
 	}
 }
 
-namespace elm::render {
+namespace render {
 	void SyncPoint::wait() const
 	{
 		fence_->cpuWait(value_);

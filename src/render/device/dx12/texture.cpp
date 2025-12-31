@@ -2,9 +2,9 @@
 
 #include "render/device/dx12/device.h"
 
-namespace elm::render {	
+namespace render {	
 
-	TextureDesc TextureDesc::create2D(uint32 width, uint32 height, ResourceFormat format, Color clearColor, TextureFlag flags, uint32 sampleCount )
+	TextureDesc TextureDesc::create2D(uint32 width, uint32 height, ResourceFormat format, core::Color clearColor, TextureFlag flags, uint32 sampleCount )
 	{
 		TextureDesc desc{};
 		desc.Width = width;

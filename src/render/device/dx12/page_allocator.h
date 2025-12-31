@@ -2,7 +2,7 @@
 
 #include "render/device/device_interface.h"
 
-namespace elm::render::device {
+namespace render::device {
 
 	class PageAllocator : public DeviceObject
 	{

@@ -1,22 +1,20 @@
 #pragma once
 
-#include "core/std_types.h"
-
-#include "data/data.h"
+#include "core/math_utils.h"
 
 #include "render/device/device_interface.h"
 
-namespace elm::render {
+namespace render {
 
 	class Render
 	{
 	public:
-		bool init(HWND hwnd, int width, int height, math::SizeI viewportSize);
+		bool init(HWND hwnd, int width, int height, core::SizeI viewportSize);
 		void fini();
 
 		void resize(int width, int height) const;
 		void viewportResize(int width, int height);
-		void draw(const data::Camera& camera) const;
+		void draw() const;
 		void present() const;
 
 		void loadTexture(const char* file);

@@ -4,7 +4,7 @@
 
 #include "render/device/device_interface.h"
 
-namespace elm::render {
+namespace render {
 	namespace device {
 
 		class RingBufferAllocator : public DeviceObject

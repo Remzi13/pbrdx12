@@ -2,6 +2,7 @@
 
 #include "core/std_types.h"
 #include "core/memory.h"
+#include "core/math_utils.h"
 
 // TODO : remove this include 
 #include "render/device/texture.h"
@@ -9,13 +10,13 @@
 
 #include "render/formats.h"
 
-#include "math/base_types.h"
+#include "dxc/dxcapi.h"
+#include "d3dx12/d3dx12.h"
+#include "d3dx12/d3dx12_root_signature.h"
+#include "d3dx12/d3dx12_core.h"
 
-#include <Windows.h>
 
-namespace elm::render {
-
-	using namespace memory;
+namespace render {
 
 	class GraphicsDevice;
 	class CommandQueue;
@@ -252,11 +253,11 @@ namespace elm::render {
 		virtual void setRootSignature(const RootSignature* pRootSignature) = 0;
 		virtual void setPipelineState(const PipelineState* pipelineState) = 0;
 		virtual void setPrimitiveTopology(const PrimitiveTopology topology) = 0;
-		virtual void setViewport(const math::RectF& rect, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
+		virtual void setViewport(const core::RectF& rect, float minDepth = 0.0f, float maxDepth = 1.0f) = 0;
 		virtual device::Allocation allocate(uint64 size, uint32 alignment = 16u) = 0;
 		virtual void setVertexBuffer(Buffer::VertexView view) = 0;
 		virtual void setIndexBuffer(Buffer::IndexView view) = 0;
-		virtual void setScissorRect(const math::RectF& rect) = 0;
+		virtual void setScissorRect(const core::RectF& rect) = 0;
 		virtual void bindRootCBV(uint32 rootIndex, const void* data, uint32 size) = 0;
 		virtual void bindResources(uint32 rootIndex, const Buffer* pViews, uint32 offset = 0) = 0;
 		virtual SyncPoint execute() = 0;

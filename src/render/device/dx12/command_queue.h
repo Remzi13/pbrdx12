@@ -6,7 +6,7 @@
 
 struct ID3D12CommandQueue;
 
-namespace elm::render {
+namespace render {
 
 	class DeviceDx12;
 

@@ -1,15 +1,16 @@
 #include "render/utils.h"
 
 #include "core/debug.h"
+#include "core/math_utils.h"
 
-#include "math/utils.h"
+//#include "math/utils.h"
 
 #include <DirectXCollision.h>
 
 #include <comdef.h>
 
 
-namespace elm::render
+namespace render
 {
 
 	namespace {
@@ -53,7 +54,7 @@ namespace elm::render
 		case ResourceFormat::BC3_UNORM:		return DXGI_FORMAT_BC3_UNORM;
 		case ResourceFormat::BC4_UNORM:		return DXGI_FORMAT_BC4_UNORM;
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 		}
 		return	DXGI_FORMAT_UNKNOWN;
 	}
@@ -70,7 +71,7 @@ namespace elm::render
 		case DXGI_FORMAT_R32G32B32A32_FLOAT:	return ResourceFormat::RGBA32_FLOAT;
 		case DXGI_FORMAT_D24_UNORM_S8_UINT:		return ResourceFormat::D24S8;
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 		}
 		return ResourceFormat::Unknown;
 	}
@@ -113,7 +114,7 @@ namespace elm::render
 		case D3D12_RESOURCE_STATE_VIDEO_ENCODE_READ:
 		case D3D12_RESOURCE_STATE_VIDEO_ENCODE_WRITE:
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 		}
 		return ResourceState::Unknown;
 	}
@@ -122,19 +123,19 @@ namespace elm::render
 	{
 		switch (format)
 		{
-		case elm::render::Common:		return D3D12_RESOURCE_STATE_COMMON;
-		case elm::render::Unknown:		return D3D12_RESOURCE_STATE_COMMON;
-		case elm::render::Present:		return D3D12_RESOURCE_STATE_PRESENT;
-		case elm::render::RenderTarget:	return D3D12_RESOURCE_STATE_RENDER_TARGET;
-		case elm::render::Depth:		return D3D12_RESOURCE_STATE_DEPTH_WRITE;
+		case render::Common:		return D3D12_RESOURCE_STATE_COMMON;
+		case render::Unknown:		return D3D12_RESOURCE_STATE_COMMON;
+		case render::Present:		return D3D12_RESOURCE_STATE_PRESENT;
+		case render::RenderTarget:	return D3D12_RESOURCE_STATE_RENDER_TARGET;
+		case render::Depth:		return D3D12_RESOURCE_STATE_DEPTH_WRITE;
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 			break;
 		}		
 		return D3D12_RESOURCE_STATE_COMMON;
 	}
 
-	void convertFormat(Color color, FLOAT outColor[4])
+	void convertFormat(core::Color color, FLOAT outColor[4])
 	{
 		outColor[0] = color.r;
 		outColor[1] = color.g;
@@ -146,9 +147,9 @@ namespace elm::render
 	{
 		switch (topology)
 		{
-		case elm::render::TriangleList: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		case render::TriangleList: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 			break;
 		}
 		return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
@@ -157,7 +158,7 @@ namespace elm::render
 	const FormatInfo& formatInfo(ResourceFormat format)
 	{
 		const FormatInfo& info = g_formatInfo[(uint32)format];
-		ELM_ASSERT(info.format == format);
+		ASSERT(info.format == format);
 		return info;
 	}
 
@@ -166,7 +167,7 @@ namespace elm::render
 		const FormatInfo& info = formatInfo(format);
 		if (info.BlockSize > 0)
 		{
-			uint64 numBlocks = math::utils::Max(1u, math::utils::divideAndRoundUp(width >> mipIndex, info.BlockSize));
+			uint64 numBlocks = core::Max(1u, core::divideAndRoundUp(width >> mipIndex, info.BlockSize));
 			return numBlocks * info.BytesPerBlock;
 		}
 		return 0;
@@ -177,8 +178,8 @@ namespace elm::render
 		const FormatInfo& info = formatInfo(format);
 		if (info.BlockSize > 0)
 		{
-			uint64 numBlocksX = math::utils::Max(1u, math::utils::divideAndRoundUp(width >> mipIndex, info.BlockSize));
-			uint64 numBlocksY = math::utils::Max(1u, math::utils::divideAndRoundUp(height >> mipIndex, info.BlockSize));
+			uint64 numBlocksX = core::Max(1u, core::divideAndRoundUp(width >> mipIndex, info.BlockSize));
+			uint64 numBlocksY = core::Max(1u, core::divideAndRoundUp(height >> mipIndex, info.BlockSize));
 			return numBlocksX * numBlocksY * info.BytesPerBlock;
 		}
 		return 0;
@@ -186,12 +187,11 @@ namespace elm::render
 
 }
 
-namespace elm::render::device {
+namespace render::device {
 
 	using namespace DirectX;
-	using namespace math;
 		
-	Matrix4x4 perspectiveFovLH(float fovAngleY, float aspectRatio, float nearZ, float farZ)
+	Matrix4 perspectiveFovLH(float fovAngleY, float aspectRatio, float nearZ, float farZ)
 	{
 		XMMATRIX P = XMMatrixPerspectiveFovLH(fovAngleY, aspectRatio, nearZ, farZ);
 		XMFLOAT4X4 proj;
@@ -200,7 +200,7 @@ namespace elm::render::device {
 		return convert(proj);
 	}
 
-	Matrix4x4 rotationAxis(const Vector3& axis, float angle)
+	Matrix4 rotationAxis(const Vector3& axis, float angle)
 	{
 		XMFLOAT3 a = convert(axis);
 		XMMATRIX R = XMMatrixRotationAxis(XMLoadFloat3(&a), angle);
@@ -211,7 +211,7 @@ namespace elm::render::device {
 		return convert(r);
 	}
 
-	Matrix4x4 rotateY(float angle)
+	Matrix4 rotateY(float angle)
 	{
 		XMMATRIX R = XMMatrixRotationY(angle);
 		DirectX::XMFLOAT4X4 r;
@@ -220,10 +220,10 @@ namespace elm::render::device {
 		return convert(r);
 	}
 
-	bool triangleIntersect(const math::Vector4& rayOrigin, const math::Vector4& rayDir, const math::Vector3& v0, const math::Vector3& v1, const math::Vector3& v2, float& t)
+	bool triangleIntersect(const Vector4& rayOrigin, const Vector4& rayDir, const Vector3& v0, const Vector3& v1, const Vector3& v2, float& t)
 	{
-		XMVECTOR origin = XMVectorSet(rayOrigin.x, rayOrigin.y, rayOrigin.z, rayOrigin.w);		
-		XMVECTOR dir = XMVectorSet(rayDir.x, rayDir.y, rayDir.z, rayDir.w);
+		XMVECTOR origin = XMVectorSet(rayOrigin.x(), rayOrigin.y(), rayOrigin.z(), rayOrigin.w());
+		XMVECTOR dir = XMVectorSet(rayDir.x(), rayDir.y(), rayDir.z(), rayDir.w());
 		auto tmp = convert(v0);
 		XMVECTOR xv0 = XMLoadFloat3(&tmp);
 		tmp = convert(v1);
@@ -241,7 +241,7 @@ namespace elm::render::device {
 		return std::wstring(buffer);
 	}
 
-	elm::render::device::DxException::DxException(HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber) :
+	render::device::DxException::DxException(HRESULT hr, const std::wstring& functionName, const std::wstring& filename, int lineNumber) :
 		ErrorCode(hr),
 		FunctionName(functionName),
 		Filename(filename),

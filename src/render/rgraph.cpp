@@ -1,6 +1,6 @@
 #include "render/rgraph.h"
 
-namespace elm::render {
+namespace render {
 
 	RGPass::RGPass(const char* name) : name_(name)
 	{}
@@ -11,7 +11,7 @@ namespace elm::render {
 		context->insertResourceBarrier(depthStencil_, ResourceState::Common, ResourceState::Depth, 0xffffffff);
 
 		context->begin(CommandContext::RenderPassInfo(renderTarget_.first, depthStencil_, renderTarget_.second));
-		context->setScissorRect(math::RectF(0, 0, (float)renderTarget_.first->width(), (float)renderTarget_.first->height()));
+		context->setScissorRect(core::RectF(0, 0, (float)renderTarget_.first->width(), (float)renderTarget_.first->height()));
 
 		auto result = callback_(context);
 
@@ -42,7 +42,7 @@ namespace elm::render {
 
 	RGPass* RGraph::addPass(const char* name)
 	{		
-		passes_.push_back(memory::makeUnique<RGPass>(name));
+		passes_.push_back(makeUnique<RGPass>(name));
 		return passes_.back().get();
 	}
 

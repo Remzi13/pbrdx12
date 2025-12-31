@@ -5,11 +5,13 @@
 
 #include <wrl.h>
 
-#include "d3dcommon.h"
+#include "dxc/dxcapi.h"
+#include "d3dx12/d3dx12.h"
+#include "d3dx12/d3dx12_root_signature.h"
+#include "d3dx12/d3dx12_core.h"
 
-namespace elm::render::device {
-	using namespace memory;
-
+namespace render::device {
+	
 	struct Shader
 	{
 		Microsoft::WRL::ComPtr<ID3DBlob> blob;

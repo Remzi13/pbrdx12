@@ -1,5 +1,7 @@
 #include "render/device/dx12/device.h"
 
+#include "core/debug.h"
+
 #include "render/utils.h"
 #include "render/device/dx12/texture.h"
 #include "render/device/dx12/descriptorHeap.h"
@@ -8,10 +10,11 @@
 #include "render/device/dx12/swap_chain.h"
 #include "render/device/dx12/fence.h"
 
-extern "C" { _declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
-extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\"; }
+//TODO - could brake compile shaders 
+//extern "C" { _declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
+//extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\"; }
 
-namespace elm::render {
+namespace render {
 
 	class DeviceDx12;
 	class CommandQueueDx12;	
@@ -131,19 +134,19 @@ namespace elm::render {
 		
 		if (EnumHasAnyFlags(desc.Flags, BufferFlag::Readback))
 		{
-			ELM_ASSERT(initialState == D3D12_RESOURCE_STATE_UNKNOWN);
+			ASSERT(initialState == D3D12_RESOURCE_STATE_UNKNOWN);
 			initialState = D3D12_RESOURCE_STATE_COPY_DEST;
 			heapType = D3D12_HEAP_TYPE_READBACK;
 		}
 		if (EnumHasAnyFlags(desc.Flags, BufferFlag::Upload))
 		{
-			ELM_ASSERT(initialState == D3D12_RESOURCE_STATE_UNKNOWN);
+			ASSERT(initialState == D3D12_RESOURCE_STATE_UNKNOWN);
 			initialState = D3D12_RESOURCE_STATE_GENERIC_READ;
 			heapType = D3D12_HEAP_TYPE_UPLOAD;
 		}
 		if (EnumHasAnyFlags(desc.Flags, BufferFlag::AccelerationStructure))
 		{
-			ELM_ASSERT(initialState == D3D12_RESOURCE_STATE_UNKNOWN);
+			ASSERT(initialState == D3D12_RESOURCE_STATE_UNKNOWN);
 			initialState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 		}
 		
@@ -186,7 +189,7 @@ namespace elm::render {
 		}
 		if (EnumHasAnyFlags(desc.Flags, BufferFlag::UnorderedAccess))
 		{
-			ELM_ASSERT( false );
+			ASSERT( false );
 		//	pBuffer->m_pUAV = CreateUAV(pBuffer, BufferUAVDesc(desc.Format, isRaw, withCounter));
 		//	pBuffer->m_NeedsStateTracking = true;
 		}
@@ -227,10 +230,10 @@ namespace elm::render {
 	{ 
 		switch (type)
 		{
-		case elm::render::CommandQueue::GRAPHICS: return graphicsQueue_.get();
-		case elm::render::CommandQueue::COPY: return copyQueue_.get();
+		case render::CommandQueue::GRAPHICS: return graphicsQueue_.get();
+		case render::CommandQueue::COPY: return copyQueue_.get();
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 		}
 		return nullptr; 
 	}
@@ -255,7 +258,7 @@ namespace elm::render {
 			desc = CD3DX12_RESOURCE_DESC::Tex2D(format, textureDesc.Width, textureDesc.Height, 1/*arraySize*/ * 6, textureDesc.Mips, textureDesc.SampleCount, 0, D3D12_RESOURCE_FLAG_NONE, D3D12_TEXTURE_LAYOUT_UNKNOWN);
 			break;
 		default:
-			ELM_ASSERT(false);
+			ASSERT(false);
 			break;
 		}
 
@@ -278,7 +281,7 @@ namespace elm::render {
 		}
 
 		D3D12_RESOURCE_STATES resourceState = D3D12_RESOURCE_STATE_COMMON;		
-		ELM_ASSERT(EnumHasAllFlags(textureDesc.Flags, TextureFlag::RenderTarget | TextureFlag::DepthStencil) == false);
+		ASSERT(EnumHasAllFlags(textureDesc.Flags, TextureFlag::RenderTarget | TextureFlag::DepthStencil) == false);
 
 		D3D12_CLEAR_VALUE* pClearValue = nullptr;
 		D3D12_CLEAR_VALUE clearValue = {};
@@ -286,7 +289,7 @@ namespace elm::render {
 
 		if (EnumHasAnyFlags(textureDesc.Flags, TextureFlag::RenderTarget))
 		{
-			//ELM_ASSERT(textureDesc.ClearColor == ClearBinding::ClearBindingValue::Color);
+			//ASSERT(textureDesc.ClearColor == ClearBinding::ClearBindingValue::Color);
 			memcpy(&clearValue.Color, &textureDesc.ClearColor, sizeof(Color));
 			resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
 			pClearValue = &clearValue;
@@ -307,7 +310,7 @@ namespace elm::render {
 		
 		if (pHeap)
 		{
-			ELM_ASSERT(false);
+			ASSERT(false);
 			//uint64 offset;
 			//ThrowIfFailed(device_->CreatePlacedResource(pHeap, offset, &desc, resourceState, pClearValue, IID_PPV_ARGS(&pResource)));
 		}
@@ -379,12 +382,12 @@ namespace elm::render {
 		}
 		if (EnumHasAnyFlags(textureDesc.Flags, TextureFlag::RenderTarget))
 		{
-			//ELM_ASSERT(false);
+			//ASSERT(false);
 			//pTexture->m_NeedsStateTracking = true;
 		}
 		else if (EnumHasAnyFlags(textureDesc.Flags, TextureFlag::DepthStencil))
 		{
-			//ELM_ASSERT(false);
+			//ASSERT(false);
 			//pTexture->m_NeedsStateTracking = true;
 		}
 
@@ -416,7 +419,7 @@ namespace elm::render {
 				srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE;
 				break;
 			default:
-				ELM_ASSERT(false);
+				ASSERT(false);
 		}
 
 
@@ -429,7 +432,7 @@ namespace elm::render {
 
 	SharedPtr<ShaderResourceView> DeviceDx12::createSRV(Buffer* pBuffer, const BufferSRVDesc& desc)
 	{
-		ELM_ASSERT(pBuffer);
+		ASSERT(pBuffer);
 		const Buffer::Desc& bufferDesc = pBuffer->desc();
 
 		D3D12_CPU_DESCRIPTOR_HANDLE descriptor = allocateCPUDescriptor();
@@ -470,7 +473,7 @@ namespace elm::render {
 
 		
 		DescriptorHandle gpuDescriptor;
-		ELM_ASSERT(!EnumHasAnyFlags(bufferDesc.Flags, BufferFlag::NoBindless));
+		ASSERT(!EnumHasAnyFlags(bufferDesc.Flags, BufferFlag::NoBindless));
 		//if (!EnumHasAnyFlags(bufferDesc.Flags, BufferFlag::NoBindless))
 		//	gpuDescriptor = RegisterGlobalResourceView(descriptor);
 
@@ -530,7 +533,7 @@ namespace elm::render {
 			{
 				break;
 			}
-			ELM_CHECK( p.pResource->Release(), == 0, "DeleteQueue");
+			CHECK( p.pResource->Release(), == 0, "DeleteQueue");
 			queue_.pop();
 		}
 	}

@@ -4,7 +4,7 @@
 
 #include "render/device/dx12/descriptorHeap.h"
 
-namespace elm::render {
+namespace render {
 
 	class GraphicsDevice;
 
