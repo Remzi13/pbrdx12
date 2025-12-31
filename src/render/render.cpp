@@ -5,6 +5,8 @@
 
 #include "render/device.h"
 #include "render/swapchain.h"
+#include "render/imgui_system.h"
+
 
 namespace render {
 
@@ -18,6 +20,8 @@ namespace render {
 
 		viewport_ = device_->createTexture(TextureDesc::create2D(800, 600, format_, Colors::Green, TextureFlag::ShaderResource | TextureFlag::RenderTarget), "Viewport");
 
+
+		ImGuiSystem::init(device_.get(), hwnd);
 
 		return false;
 	}

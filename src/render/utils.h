@@ -19,4 +19,17 @@ namespace render {
 		using U = std::underlying_type_t<Enum>;
 		return (static_cast<U>(flags) & static_cast<U>(contains)) == static_cast<U>(contains);
 	}
+
+	struct FormatInfo
+	{
+		const char* name;
+		ResourceFormat format;
+		uint8  BytesPerBlock;
+		uint8 BlockSize;
+	};
+
+	const FormatInfo& formatInfo(ResourceFormat format);
+	uint64 rowPitch(ResourceFormat format, uint32 width, uint32 mipIndex = 0);
+	uint64 slicePitch(ResourceFormat format, uint32 width, uint32 height, uint32 mipIndex = 0);
+
 }

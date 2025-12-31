@@ -7,6 +7,8 @@ project(prtdx12 CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+include_directories("${THIRD_PARTY_DIR}")
 include_directories("third_party/D3D12/include")
 include_directories("third_party/Dxc/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")

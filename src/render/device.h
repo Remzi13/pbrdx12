@@ -29,6 +29,7 @@ namespace render {
 		SharedPtr<ShaderResourceView> createSRV(Texture* pTexture, const TextureSRVDesc& desc);
 		SharedPtr<ShaderResourceView> createSRV(Buffer* pBuffer, const BufferSRVDesc& desc);
 		SharedPtr<Texture> createTexture(const TextureDesc& desc, const char* name);
+		SharedPtr<Texture> createTexture(const TextureDesc& desc, const char* name, ID3D12Heap* pHeap, const vector<D3D12_SUBRESOURCE_DATA>& initData);
 		UniquePtr<Buffer> createBuffer(const Buffer::Desc& desc, ID3D12Heap* pHeap, uint64 offset, const char* name, const void* pInitData);
 
 		CommandContext* getCommandContext(CommandQueue::Type type);
@@ -40,8 +41,7 @@ namespace render {
 		ID3D12Device* device() const;
 		IDXGIFactory4* factory() const;
 
-	private:
-		SharedPtr<Texture> createTexture(const TextureDesc& desc, const char* name, ID3D12Heap* pHeap, const vector<D3D12_SUBRESOURCE_DATA>& initData);
+	private:		
 		DescriptorHandle registerGlobalResourceView(D3D12_CPU_DESCRIPTOR_HANDLE view);
 		D3D12_CPU_DESCRIPTOR_HANDLE allocateCPUDescriptor();
 

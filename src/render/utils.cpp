@@ -1,8 +1,31 @@
 #include "render/utils.h"
 
 #include "core/debug.h"
+#include "core/math.h"
 
 namespace render {
+
+	namespace {
+#define FORMAT_TYPE(name) #name, ResourceFormat::name
+
+		constexpr FormatInfo g_formatInfo[] = {
+			{FORMAT_TYPE(Unknown),		0,	0},
+			{FORMAT_TYPE(R16_UINT),		2,	1},
+			{FORMAT_TYPE(R32_UINT),		4,	1},
+			{FORMAT_TYPE(RG32_FLOAT),	8,	1},
+			{FORMAT_TYPE(RGB32_FLOAT),	12, 1},
+			{FORMAT_TYPE(RGBA8_UNORM),	4,	1},
+			{FORMAT_TYPE(RGBA32_FLOAT),	16, 1},
+			{FORMAT_TYPE(D24S8),		4,	1},
+			{FORMAT_TYPE(BGRA8_UNORM),	4,	1},
+			{FORMAT_TYPE(BC1_UNORM),	8,	4},
+			{FORMAT_TYPE(BC2_UNORM),	16, 4},
+			{FORMAT_TYPE(BC3_UNORM),	16,	4},
+			{FORMAT_TYPE(BC4_UNORM),	8,	4},
+			{FORMAT_TYPE(BC5_UNORM),	16,	4}
+		};
+		static_assert(ARRAYSIZE(g_formatInfo) == static_cast<uint32>(ResourceFormat::Count));
+	}
 
 	DXGI_FORMAT convertFormat(ResourceFormat format)
 	{
@@ -67,6 +90,36 @@ namespace render {
 			ASSERT(false);
 		}
 		return ResourceState::Unknown;
+	}
+
+	const FormatInfo& formatInfo(ResourceFormat format)
+	{
+		const FormatInfo& info = g_formatInfo[(uint32)format];
+		ASSERT(info.format == format);
+		return info;
+	}
+
+	uint64 rowPitch(ResourceFormat format, uint32 width, uint32 mipIndex)
+	{
+		const FormatInfo& info = formatInfo(format);
+		if (info.BlockSize > 0)
+		{
+			uint64 numBlocks = math::Max(1u, math::divideAndRoundUp(width >> mipIndex, info.BlockSize));
+			return numBlocks * info.BytesPerBlock;
+		}
+		return 0;
+	}
+
+	uint64 slicePitch(ResourceFormat format, uint32 width, uint32 height, uint32 mipIndex)
+	{
+		const FormatInfo& info = formatInfo(format);
+		if (info.BlockSize > 0)
+		{
+			uint64 numBlocksX = math::Max(1u, math::divideAndRoundUp(width >> mipIndex, info.BlockSize));
+			uint64 numBlocksY = math::Max(1u, math::divideAndRoundUp(height >> mipIndex, info.BlockSize));
+			return numBlocksX * numBlocksY * info.BytesPerBlock;
+		}
+		return 0;
 	}
 
 }
