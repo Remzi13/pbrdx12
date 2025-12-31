@@ -2,6 +2,7 @@
 
 #include "core/debug.h"
 #include "core/file_system.h"
+#include "core/string_utils.h"
 
 #include "render/utils.h"
 
@@ -12,7 +13,11 @@
 
 namespace render::device {
 
-	//namespace {
+	namespace {
+
+		Microsoft::WRL::ComPtr<IDxcUtils> g_dxcUtils;
+		Microsoft::WRL::ComPtr<IDxcCompiler3> g_dxcCompiler;		
+
 	//
 	//	constexpr const char* gCompilerPath = "dxcompiler.dll";
 	//
@@ -126,12 +131,20 @@ namespace render::device {
 	//		ELM_LOG(Info, "Loaded %s", gCompilerPath);
 	//	}
 	//
-	//	ShaderManager g_shaderManager;
-	//}
+		ShaderManager g_shaderManager;
+	}
 	//
 	ShaderManager::ShaderManager()
 	{
 	//	LoadDXC();
+		if (FAILED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&g_dxcUtils)))) {
+			throw std::runtime_error("Failed to create DXC Utils.");
+		}
+
+		if (FAILED(
+			DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&g_dxcCompiler)))) {
+			throw std::runtime_error("Failed to create DXC Compiler.");
+		}
 	}
 	//
 	//Shader* ShaderManager::shader(const char* path, const char* enterPoint, const char* target)
@@ -184,12 +197,90 @@ namespace render::device {
 	//{
 	//	return g_shaderManager.shader(path, enterPoint, target);
 	//}
+
+
+	Microsoft::WRL::ComPtr<IDxcBlob> CompileShader(
+		const std::wstring& filename,
+		const std::wstring& entryPoint,
+		const std::wstring& targetProfile)
+	{	
+		Microsoft::WRL::ComPtr<IDxcBlobEncoding> source;	
+		if (FAILED(g_dxcUtils->LoadFile(filename.c_str(), nullptr, &source)))
+		{
+			throw std::runtime_error("Failed to load shader file.");
+		}
+				
+		std::vector<LPCWSTR> arguments;
+
+		
+		arguments.push_back(L"-T");
+		arguments.push_back(targetProfile.c_str());
+
+		
+		arguments.push_back(L"-E");
+		arguments.push_back(entryPoint.c_str());
+
+		arguments.push_back(L"-Zi");
+		arguments.push_back(L"-Od");
+		arguments.push_back(L"-Qstrip_reflect");
+		arguments.push_back(L"-all-resources-bound");
+
+		DxcBuffer sourceBuffer;
+		sourceBuffer.Ptr = source->GetBufferPointer();
+		sourceBuffer.Size = source->GetBufferSize();
+		sourceBuffer.Encoding = DXC_CP_ACP;
+
+		
+		Microsoft::WRL::ComPtr<IDxcResult> result;
+		if (FAILED(g_dxcCompiler->Compile(
+			&sourceBuffer,              
+			arguments.data(),
+			(UINT)arguments.size(),
+			nullptr,
+			IID_PPV_ARGS(&result)
+		)))
+		{
+			throw std::runtime_error("DxcCompiler::Compile failed.");
+		}
+
+		HRESULT hr;
+		result->GetStatus(&hr);
+
+		Microsoft::WRL::ComPtr<IDxcBlobUtf8> errors;		
+		result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&errors), nullptr);
+
+		if (FAILED(hr))
+		{
+			std::string errorMsg = "Shader compilation failed (HR: " + std::to_string(hr) + "):\n";
+			if (errors && errors->GetStringPointer())
+			{
+				errorMsg += errors->GetStringPointer();
+			}
+			throw std::runtime_error(errorMsg);
+		}
+
+		
+		Microsoft::WRL::ComPtr<IDxcBlob> shaderBlob;
+
+		if (FAILED(result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shaderBlob), nullptr)))
+		{
+			throw std::runtime_error("Failed to get compiled shader object.");
+		}
+
+		return shaderBlob;
+	}
+
 	Shader* ShaderManager::shader(const char* path, const char* enterPoint, const char* target)
 	{
-		return nullptr;
+		auto shader = makeUnique<Shader>();
+		shader->blob = CompileShader(core::MultibyteToUnicode(path).result(), core::MultibyteToUnicode(enterPoint).result(), core::MultibyteToUnicode(target).result());
+		auto r = shaders_.emplace(string(path) + '|' + string(enterPoint), std::move(shader));
+		return r.first->second.get();
 	}
+
+	
 	Shader* ShaderManager::getShader(const char* path, const char* enterPoint, const char* target)
-	{
-		return nullptr;
+	{		
+		return g_shaderManager.shader(path, enterPoint, target);
 	}
 }

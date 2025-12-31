@@ -11,8 +11,8 @@
 #include "render/device/dx12/fence.h"
 
 //TODO - could brake compile shaders 
-//extern "C" { _declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
-//extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\"; }
+extern "C" { _declspec(dllexport) extern const UINT D3D12SDKVersion = D3D12_SDK_VERSION; }
+extern "C" { _declspec(dllexport) extern const char* D3D12SDKPath = ".\\"; }
 
 namespace render {
 

@@ -1,5 +1,6 @@
 set(RENDER_LIB "render")
 
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui")
 
 set(RENDER_SRC
 	render.h
@@ -11,6 +12,8 @@ set(RENDER_SRC
 	formats.h
 	image.h
 	image.cpp
+	imgui_system.h
+	imgui_system.cpp
 )
 
 set(DEVICE_SRC
@@ -49,8 +52,22 @@ set(DEVICE_SRC
 	device/dx12/ringbuffer_allocator.cpp
 )
 
-add_library( ${RENDER_LIB} ${RENDER_SRC} ${DEVICE_SRC}  )
+set(IMGUI_SRC
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imconfig.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui_draw.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui_demo.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui_widgets.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui_tables.cpp"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui_internal.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui_impl_win32.h"
+	"${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/imgui/imgui_impl_win32.cpp"
+)
 
+add_library( ${RENDER_LIB} ${RENDER_SRC} ${DEVICE_SRC} ${IMGUI_SRC} )
+
+source_group( "tp/imgui" FILES ${IMGUI_SRC} )
 source_group( "device" FILES ${DEVICE_SRC} )
 source_group( "src" FILES ${RENDER_SRC})
 

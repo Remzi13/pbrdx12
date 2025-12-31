@@ -14,7 +14,8 @@ namespace render::device {
 	
 	struct Shader
 	{
-		Microsoft::WRL::ComPtr<ID3DBlob> blob;
+		//Microsoft::WRL::ComPtr<ID3DBlob> blob;
+		Microsoft::WRL::ComPtr<IDxcBlob> blob;
 	};
 
 	class ShaderManager

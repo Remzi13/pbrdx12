@@ -5,6 +5,7 @@
 #include "render/rgraph.h"
 #include "render/image.h"
 #include "render/utils.h"
+#include "render/imgui_system.h"
 
 namespace render {
 
@@ -85,9 +86,7 @@ namespace render {
 		viewport_ = device_->createTexture( TextureDesc::create2D(viewportSize.x, viewportSize.y, format_, Colors::Green, TextureFlag::ShaderResource | TextureFlag::RenderTarget ), "Viewport" );
 		depthStencil_ = device_->createTexture(TextureDesc::create2D(viewportSize.x, viewportSize.y, ResourceFormat::D24S8, {1, 0, 0, 0}, TextureFlag::DepthStencil), "DepthStencil");
 
-		createPipelines( device_.get() );
-
-		skyBox_ = createTextureFromFile("sunsetcube1024.dds");
+		ImGuiSystem::init(this, hwnd);
 
 		return result;
 	}
@@ -135,8 +134,14 @@ namespace render {
 		//	g_matBuffer = device_->createBuffer(Buffer::Desc({ data.size() * sizeof(MatData) , sizeof(MatData), BufferFlag::ShaderResource}), "mat_buffer", data.data());
 	}	
 
-	void Render::draw() const
-    {
+	void Render::update(float dt)
+	{
+		ImGuiSystem::update(dt);
+	}
+
+	void Render::draw() 
+	{
+		ImGuiSystem::render(this);
 		//struct
 		//{
 		//	DirectX::XMFLOAT4X4 gViewProj{};
@@ -291,6 +296,7 @@ namespace render {
 
 	SharedPtr<Texture> Render::createTextureFromFile(const char* fileName) const
 	{
+		ASSERT(false);
 		//Image img;
 		//const auto path = settings().get<string>(TEXTURES_PATH) + fileName;
 		//img.load(path.c_str());

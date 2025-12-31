@@ -11,6 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 include_directories("third_party/D3D12/include")
 include_directories("third_party/Dxc/include")
 include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(THIRD_PARTY_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+include_directories("${THIRD_PARTY_DIR}")
 
 add_subdirectory("src/core")
 add_subdirectory("src/render")
@@ -18,9 +20,7 @@ add_subdirectory("src/render")
 set(SRC
     src/vector.h
     src/app.h
-    src/app.cpp
-    src/buffers.h
-    src/buffers.cpp
+    src/app.cpp    
     src/input.h
     src/input.cpp
     src/scene.h

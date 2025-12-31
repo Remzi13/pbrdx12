@@ -49,9 +49,11 @@ void App::update()
 
 		SetWindowText( hwnd_, title );
 	}
-
 	inputUpdate();
-	
+
+	render_.update(deltaTime);
+	render_.draw();
+	render_.present();
 }
 
 void App::inputUpdate()

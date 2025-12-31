@@ -14,7 +14,9 @@ namespace render {
 
 		void resize(int width, int height) const;
 		void viewportResize(int width, int height);
-		void draw() const;
+
+		void update(float dt);
+		void draw();
 		void present() const;
 
 		void loadTexture(const char* file);
@@ -35,7 +37,6 @@ namespace render {
 		UniquePtr<CommandContext> commandContext_;
 		SharedPtr<Texture> viewport_;
 		SharedPtr<Texture> depthStencil_;
-		SharedPtr<Texture> skyBox_;
 
 		unordered_map<string, SharedPtr<Texture>> textures_;
 	};

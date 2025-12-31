@@ -2,17 +2,19 @@ set(CORE_LIB "core")
 set(CMAKE_CXX_STANDARD 20)
 
 set(CORE_SRC
-    debug.h
-    std_types.h
-    std_types.cpp    
-    memory.h
-    memory.cpp
-    math_utils.h    
-    math_utils.cpp
-    colors.h
-    colors.cpp
-    file_system.h
-    file_system.cpp
+	debug.h
+	std_types.h
+	std_types.cpp
+	memory.h
+	memory.cpp
+	math_utils.h
+	math_utils.cpp
+	colors.h
+	colors.cpp
+	file_system.h
+	file_system.cpp
+	string_utils.h
+	string_utils.cpp
 )
 
 source_group( "src" FILES ${CORE_SRC} )
