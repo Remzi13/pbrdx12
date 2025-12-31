@@ -15,8 +15,6 @@ set(SRC
     src/vector.h
     src/app.h
     src/app.cpp
-    src/render.h
-    src/render.cpp
     src/buffers.h
     src/buffers.cpp
     src/input.h
