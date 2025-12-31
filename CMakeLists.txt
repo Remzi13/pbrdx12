@@ -36,11 +36,12 @@ add_executable(pbrdx12 ${SRC})
 set_target_properties(pbrdx12 PROPERTIES WIN32_EXECUTABLE TRUE)
 target_compile_definitions(pbrdx12 PRIVATE UNICODE _UNICODE)
 
-target_link_libraries(pbrdx12 debug render)
+target_link_libraries(pbrdx12 debug render core)
 
 target_link_libraries(pbrdx12
     d3d12.lib
     dxgi.lib
     user32.lib
     dxcompiler.lib
+    dxguid.lib
 )

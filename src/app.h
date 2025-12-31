@@ -11,6 +11,8 @@
 #include "input.h"
 #include "scene.h"
 
+#include "render/render.h"
+
 #include <vector>
 
 class App {
@@ -28,7 +30,7 @@ private:
 private:
 	Scene scene_;
 	bool isDirty_{ true };
-
+	render::Render render_;
 	HWND hwnd_;
 };
 

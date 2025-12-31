@@ -20,6 +20,8 @@ bool App::init( HWND hwnd )
 {
 	hwnd_ = hwnd;
 
+	render_.init(hwnd, 800, 600,{800, 600});
+
 	g_lastTime = std::chrono::high_resolution_clock::now();	
 	return false;
 }
