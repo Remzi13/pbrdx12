@@ -1,12 +1,12 @@
-﻿//
-// Created by zakkh on 10.11.2025.
-//
-#include "app.h"
+﻿#include "app.h"
 
 #include "input.h"
 
+#include "render/imgui_system.h"
+
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 namespace {
 	std::chrono::time_point g_lastTime = std::chrono::high_resolution_clock::now();
@@ -16,58 +16,71 @@ namespace {
 	float g_frameTime = 0.0f;
 }
 
-bool App::init( HWND hwnd )
+bool App::init(HWND hwnd)
 {
 	hwnd_ = hwnd;
 
-	render_.init(hwnd, 800, 600,{800, 600});
+	render_.init(hwnd, 800, 600, { 800, 600 });
 
-	g_lastTime = std::chrono::high_resolution_clock::now();	
+	g_lastTime = std::chrono::high_resolution_clock::now();
 	return false;
 }
 
 void App::update()
 {
-	auto currentTime = std::chrono::high_resolution_clock::now();
-	float deltaTime = std::chrono::duration<float>( currentTime - g_lastTime ).count();	
-	g_lastTime = currentTime;
+	auto frameStart = std::chrono::high_resolution_clock::now();
+
+	float deltaTime = std::chrono::duration<float>(frameStart - g_lastTime).count();
+	g_lastTime = frameStart;
+
+	if (deltaTime > 0.1f) deltaTime = 0.1f;
 
 	g_frameTime = deltaTime * 1000.0f;
-
 	g_fpsTimer += deltaTime;
 	g_frameCount++;
 
-	if ( g_fpsTimer >= 1.0f )
-	{
+	// Обновление заголовка окна (раз в секунду)
+	if (g_fpsTimer >= 1.0f) {
 		g_fps = g_frameCount;
-
 		g_frameCount = 0;
 		g_fpsTimer -= 1.0f;
 
 		wchar_t title[128];
-		swprintf_s( title, 128, L"PBRDX12 - FPS: [ %d | %.2f ms]", g_fps, g_frameTime );
-
-		SetWindowText( hwnd_, title );
+		swprintf_s(title, 128, L"PBRDX12 - FPS: [ %d | %.2f ms]", g_fps, g_frameTime);
+		SetWindowText(hwnd_, title);
 	}
-	inputUpdate();
 
+	// 3. Выполняем работу
+	inputUpdate();
 	render_.update(deltaTime);
 	render_.draw();
 	render_.present();
+
+	const float targetFrameTime = 1.0f / 30.0f;
+
+	auto workDoneTime = std::chrono::high_resolution_clock::now();
+	float timeSpentWorking = std::chrono::duration<float>(workDoneTime - frameStart).count();
+
+	if (timeSpentWorking < targetFrameTime)
+	{
+		// Вычисляем, сколько нужно "доспать"
+		float sleepDuration = targetFrameTime - timeSpentWorking;
+		std::this_thread::sleep_for(std::chrono::duration<double>(sleepDuration));
+	}
 }
 
 void App::inputUpdate()
 {
 	// обработка событий, пока они есть
-	while ( !Input::empty() ) {
+	while (!Input::empty()) {
 		auto evOpt = Input::pop();
-		if ( !evOpt ) break;
+		if (!evOpt) break;
 		InputEvent ev = *evOpt;
 
-		switch ( ev.type ) {
+		switch (ev.type) {
 		case InputEvent::Type::KeyDown:
 		case InputEvent::Type::KeyUp:
-			handleKeyEvent( ev );
+			handleKeyEvent(ev);
 			break;
 		case InputEvent::Type::Char:
 			//handleChar(ev.ch);
@@ -94,21 +107,30 @@ void App::inputUpdate()
 	}
 }
 
-void App::handleKeyEvent( const InputEvent& event )
+bool App::input(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	if (render::ImGuiSystem::input(hwnd, msg, wParam, lParam))
+	{
+		return true;
+	}
+	return false;
+}
+
+void App::handleKeyEvent(const InputEvent& event)
 {
 	// Проверяем, что это клавиатурное событие
-	if ( event.type != InputEvent::Type::KeyDown &&
-		event.type != InputEvent::Type::KeyUp )
+	if (event.type != InputEvent::Type::KeyDown &&
+		event.type != InputEvent::Type::KeyUp)
 		return;
 
-	bool pressed = ( event.type == InputEvent::Type::KeyDown );
+	bool pressed = (event.type == InputEvent::Type::KeyDown);
 
 	const float shift = 0.1f;
-	switch ( event.key )
+	switch (event.key)
 	{
 	case VK_LEFT:
-		if ( pressed )
-		{	
+		if (pressed)
+		{
 			auto camera = scene_.camera();
 			camera.pos[0] -= shift;
 			scene_.setCamera(camera);
@@ -118,7 +140,7 @@ void App::handleKeyEvent( const InputEvent& event )
 			//std::cout << "Left pressed" << camera_.pos() << "\n";
 		}
 		else
-		{			
+		{
 			std::cout << "Left released\n";
 		}
 		// Например, измени направление персонажа:
@@ -126,7 +148,7 @@ void App::handleKeyEvent( const InputEvent& event )
 		break;
 
 	case VK_RIGHT:
-		if ( pressed )
+		if (pressed)
 		{
 			auto camera = scene_.camera();
 			camera.pos[0] += shift;
@@ -142,7 +164,7 @@ void App::handleKeyEvent( const InputEvent& event )
 		break;
 
 	case VK_UP:
-		if ( pressed )
+		if (pressed)
 		{
 			auto camera = scene_.camera();
 			camera.pos[2] += shift;
@@ -160,7 +182,7 @@ void App::handleKeyEvent( const InputEvent& event )
 		break;
 
 	case VK_DOWN:
-		if ( pressed )
+		if (pressed)
 		{
 			auto camera = scene_.camera();
 			camera.pos[2] -= shift;
@@ -182,7 +204,7 @@ void App::handleKeyEvent( const InputEvent& event )
 		}
 		break;
 	case 'Z':
-		if ( pressed )
+		if (pressed)
 		{
 
 		}

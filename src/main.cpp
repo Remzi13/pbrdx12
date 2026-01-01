@@ -10,6 +10,8 @@
 
 #include <ios>
 
+App app;
+
 static uint32_t getModifiers( WPARAM wParam )
 {
 	uint32_t m = 0;
@@ -46,12 +48,17 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 
 	std::uint16_t width = 800;
 	std::uint16_t height = 600;
+
+	RECT R = { 0, 0, (int)width, (int)height };
+	AdjustWindowRect(&R, WS_OVERLAPPEDWINDOW, false);
+	int nwidth = R.right - R.left;
+	int nheight = R.bottom - R.top;
 	// 2. Создание окна
 	HWND hwnd = CreateWindowEx(
 		0, CLASS_NAME,
 		L"RTDX12", // Заголовок окна
 		WS_OVERLAPPEDWINDOW,
-		CW_USEDEFAULT, CW_USEDEFAULT, width, height, // Размеры окна
+		CW_USEDEFAULT, CW_USEDEFAULT, nwidth, nheight, // Размеры окна
 		nullptr, nullptr, hInstance, nullptr
 	);
 
@@ -60,7 +67,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 		return 0;
 	}
 
-	App app;
+	
 
 	// 3. Инициализация DirectX 12
 	try
@@ -100,6 +107,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 
 LRESULT CALLBACK WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam )
 {
+	if (app.input(hwnd, uMsg, wParam, lParam))
+	{
+		return 0;
+	}
+
 	switch ( uMsg )
 	{
 	case WM_PAINT:
@@ -205,6 +217,13 @@ LRESULT CALLBACK WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam 
 		ev.type = InputEvent::Type::FocusLost;
 		Input::pushEvent( ev );
 		return 0;
+	}
+	case WM_SIZE:
+	{
+		auto size = { LOWORD(lParam), HIWORD(lParam) };
+		double x;InputEvent ev;
+		ev.type = InputEvent::Type::FocusLost;
+		Input::pushEvent( ev );
 	}
 	case WM_SETFOCUS:
 	{

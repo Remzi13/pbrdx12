@@ -22,6 +22,8 @@ public:
 	void update();
 	void fini();
 
+	bool input(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
 private:
 	void inputUpdate();
 

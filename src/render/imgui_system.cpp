@@ -101,8 +101,7 @@ namespace render::ImGuiSystem {
 		
 		ImGuiViewport* pViewport = ImGui::GetMainViewport();
 		ImGuiID dockspace = ImGui::DockSpaceOverViewport(ImGui::GetID("Dockspace"), pViewport);
-
-		
+				
 		if (ImGui::BeginMainMenuBar())
 		{
 			if (ImGui::BeginMenu("Windows"))

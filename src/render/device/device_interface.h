@@ -115,8 +115,6 @@ namespace render {
 		virtual void init() =0;
 	};
 
-	
-
 	class Buffer
 	{
 	public:
