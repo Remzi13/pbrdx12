@@ -5,10 +5,7 @@
 #include <exception>
 
 #include "input.h"
-
 #include "app.h"
-
-#include <ios>
 
 App app;
 
@@ -30,18 +27,16 @@ void enableConsole()
 	std::ios::sync_with_stdio();
 }
 
-LRESULT CALLBACK WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam ); // Функция "обработчика" окна
+LRESULT CALLBACK WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam );
 
-// ---- Точка входа WinMain ----
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 {
 	enableConsole();
-
-	// 1. Регистрация класса окна
+	
 	const wchar_t CLASS_NAME[] = L"RTDX12";
 
 	WNDCLASS wc = {};
-	wc.lpfnWndProc = WindowProc; // Наша функция-обработчик
+	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
 	wc.lpszClassName = CLASS_NAME;
 	RegisterClass( &wc );
@@ -66,10 +61,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 	{
 		return 0;
 	}
-
-	
-
-	// 3. Инициализация DirectX 12
+		
 	try
 	{
 		app.init( hwnd );
@@ -80,15 +72,13 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 		return 1;
 	}
 
-	// 4. Показываем окно
+
 	ShowWindow( hwnd, nCmdShow );
 
-	// 5. Главный цикл сообщений (пока окно не закроют)
 	MSG msg = {};
 
 	while ( msg.message != WM_QUIT )
 	{
-		// Обработка сообщений Windows (если они есть)
 		if ( PeekMessage( &msg, nullptr, 0, 0, PM_REMOVE ) )
 		{
 			TranslateMessage( &msg );
@@ -99,7 +89,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow )
 			app.update();
 		}
 	}
-	// 6. Очистка ресурсов
+
 	app.fini();
 
 	return 0;
@@ -217,13 +207,6 @@ LRESULT CALLBACK WindowProc( HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam 
 		ev.type = InputEvent::Type::FocusLost;
 		Input::pushEvent( ev );
 		return 0;
-	}
-	case WM_SIZE:
-	{
-		auto size = { LOWORD(lParam), HIWORD(lParam) };
-		double x;InputEvent ev;
-		ev.type = InputEvent::Type::FocusLost;
-		Input::pushEvent( ev );
 	}
 	case WM_SETFOCUS:
 	{

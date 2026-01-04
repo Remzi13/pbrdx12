@@ -15,7 +15,6 @@
 #include "d3dx12/d3dx12_root_signature.h"
 #include "d3dx12/d3dx12_core.h"
 
-
 namespace render {
 
 	class GraphicsDevice;
@@ -192,7 +191,6 @@ namespace render {
 	protected:
 		int numFrames_;
 	};
-
 
 	class CommandContext : public DeviceObject
 	{

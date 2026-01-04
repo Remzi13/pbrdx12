@@ -10,7 +10,7 @@ namespace render {
 	
 	namespace utils {
 
-		bool IsTransitionAllowed(D3D12_COMMAND_LIST_TYPE commandlistType, D3D12_RESOURCE_STATES state)
+		bool isTransitionAllowed(D3D12_COMMAND_LIST_TYPE commandlistType, D3D12_RESOURCE_STATES state)
 		{
 			constexpr int VALID_COMPUTE_QUEUE_RESOURCE_STATES =
 				D3D12_RESOURCE_STATE_COMMON
@@ -36,14 +36,14 @@ namespace render {
 			return true;
 		}
 
-		string ResourceStateToString(D3D12_RESOURCE_STATES state)
+		string resourceStateToString(D3D12_RESOURCE_STATES state)
 		{
 			switch (state)
 			{
 			case D3D12_RESOURCE_STATE_PRESENT: return "Present";
 			case D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER: return "Vertex_Constant_Buffer";
 			case D3D12_RESOURCE_STATE_INDEX_BUFFER: 
-			case D3D12_RESOURCE_STATE_RENDER_TARGET:				
+			case D3D12_RESOURCE_STATE_RENDER_TARGET:
 			case D3D12_RESOURCE_STATE_UNORDERED_ACCESS:
 			case D3D12_RESOURCE_STATE_DEPTH_WRITE:
 			case D3D12_RESOURCE_STATE_DEPTH_READ:
@@ -78,7 +78,7 @@ namespace render {
 			return "Unknown";
 		}
 
-		string CommandlistTypeToString(D3D12_COMMAND_LIST_TYPE type)
+		string commandlistTypeToString(D3D12_COMMAND_LIST_TYPE type)
 		{
 			switch (type)
 			{

@@ -39,7 +39,6 @@ void App::update()
 	g_fpsTimer += deltaTime;
 	g_frameCount++;
 
-	// Обновление заголовка окна (раз в секунду)
 	if (g_fpsTimer >= 1.0f) {
 		g_fps = g_frameCount;
 		g_frameCount = 0;
@@ -49,8 +48,7 @@ void App::update()
 		swprintf_s(title, 128, L"PBRDX12 - FPS: [ %d | %.2f ms]", g_fps, g_frameTime);
 		SetWindowText(hwnd_, title);
 	}
-
-	// 3. Выполняем работу
+	
 	inputUpdate();
 	render_.update(deltaTime);
 	render_.draw();
@@ -71,7 +69,6 @@ void App::update()
 
 void App::inputUpdate()
 {
-	// обработка событий, пока они есть
 	while (!Input::empty()) {
 		auto evOpt = Input::pop();
 		if (!evOpt) break;
